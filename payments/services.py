@@ -1,0 +1,38 @@
+"""
+Capa de integración con Mercado Pago.
+Aislada aquí para que las vistas no dependan del SDK directamente.
+"""
+from django.conf import settings
+
+import mercadopago
+
+
+def get_mp_sdk(tenant=None):
+    """Retorna el SDK de MP o None si no hay token configurado."""
+    # TODO: leer token por tenant cuando BusinessProfile tenga mp_access_token
+    token = getattr(settings, 'MERCADOPAGO_ACCESS_TOKEN', '')
+    if not token:
+        return None
+    return mercadopago.SDK(token)
+
+
+def build_mp_preference(payment_intent, tenant_slug, frontend_url, notification_url):
+    order = payment_intent.order
+    return {
+        "items": [
+            {
+                "title": f"Sena - Pedido #{order.id}",
+                "quantity": 1,
+                "unit_price": float(payment_intent.amount),
+                "currency_id": "ARS",
+            }
+        ],
+        "back_urls": {
+            "success": f"{frontend_url}/payment/success/",
+            "failure": f"{frontend_url}/payment/failure/",
+            "pending": f"{frontend_url}/payment/pending/",
+        },
+        "auto_return": "approved",
+        "external_reference": str(payment_intent.id),
+        "notification_url": notification_url,
+    }

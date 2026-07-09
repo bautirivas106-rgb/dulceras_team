@@ -1,0 +1,136 @@
+import { useLocation, Link } from 'react-router-dom'
+import type { OrderDetail } from '../../types/orders'
+
+export default function OrderConfirmation() {
+  const { state } = useLocation() as { state: { order: OrderDetail } | null }
+  const order = state?.order
+
+  if (!order) {
+    return (
+      <div className="min-h-screen bg-[#FDF6EC] flex items-center justify-center px-4">
+        <div className="text-center">
+          <div className="text-5xl mb-4">🤔</div>
+          <p className="text-[#7C4A2D] mb-4">No encontramos información del pedido.</p>
+          <Link to="/" className="text-[#E8889A] font-semibold hover:underline">
+            Volver al inicio
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  const formattedDate = new Date(order.required_date + 'T12:00:00').toLocaleDateString('es-AR', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  })
+
+  return (
+    <div className="min-h-screen bg-[#FDF6EC] px-4 py-12">
+      <div className="max-w-md mx-auto">
+
+        {/* Éxito */}
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
+            ✅
+          </div>
+          <h1 className="text-2xl font-bold text-[#3D1A0E] mb-2">
+            ¡Pedido recibido!
+          </h1>
+          <p className="text-[#7C4A2D]">
+            Te avisamos por WhatsApp para coordinar la seña.
+          </p>
+        </div>
+
+        {/* Card del pedido */}
+        <div className="bg-white rounded-2xl border border-[#F5E8D0] p-6 mb-6">
+          <div className="flex items-center justify-between mb-5 pb-4 border-b border-[#F5E8D0]">
+            <div>
+              <p className="text-xs text-[#A0673A] font-semibold uppercase tracking-wide">N° de pedido</p>
+              <p className="text-2xl font-bold text-[#3D1A0E]">#{order.id}</p>
+            </div>
+            <span className="bg-[#F7D0D8] text-[#7C4A2D] text-xs font-semibold px-3 py-1.5 rounded-full">
+              {order.status_display}
+            </span>
+          </div>
+
+          {/* Items */}
+          <div className="space-y-2 mb-4">
+            {order.items.map((item) => (
+              <div key={item.id} className="flex justify-between text-sm">
+                <span className="text-[#7C4A2D]">
+                  {item.product_name} ×{item.quantity}
+                  <span className="block text-xs text-[#C4A882]">{item.variant_name}</span>
+                </span>
+                <span className="font-semibold text-[#3D1A0E]">
+                  ${Number(item.subtotal).toLocaleString('es-AR')}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="border-t border-[#F5E8D0] pt-3 space-y-1 text-sm">
+            <div className="flex justify-between text-[#7C4A2D]">
+              <span>Entrega</span>
+              <span>{order.delivery_method_display}</span>
+            </div>
+            <div className="flex justify-between text-[#7C4A2D]">
+              <span>Fecha</span>
+              <span className="capitalize">{formattedDate}</span>
+            </div>
+            {Number(order.delivery_cost) > 0 && (
+              <div className="flex justify-between text-[#7C4A2D]">
+                <span>Delivery</span>
+                <span>${Number(order.delivery_cost).toLocaleString('es-AR')}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-bold text-[#3D1A0E] text-base pt-2 border-t border-[#F5E8D0]">
+              <span>Total</span>
+              <span>${Number(order.total).toLocaleString('es-AR')}</span>
+            </div>
+          </div>
+
+          {/* Seña */}
+          <div className="mt-4 bg-[#F7D0D8] rounded-xl px-4 py-4 text-center">
+            <p className="text-xs font-semibold text-[#7C4A2D] mb-1">Seña pendiente de pago</p>
+            <p className="text-3xl font-bold text-[#E8889A]">
+              ${Number(order.deposit_amount).toLocaleString('es-AR')}
+            </p>
+            <p className="text-xs text-[#A0673A] mt-1">
+              Te contactamos por WhatsApp para coordinar el pago
+            </p>
+          </div>
+        </div>
+
+        {/* Próximos pasos */}
+        <div className="bg-[#F5E8D0] rounded-2xl px-5 py-4 mb-6">
+          <p className="font-semibold text-[#3D1A0E] text-sm mb-3">¿Qué pasa ahora?</p>
+          <ol className="space-y-2 text-sm text-[#7C4A2D]">
+            <li className="flex gap-2"><span className="font-bold text-[#E8889A]">1.</span> Te enviamos un mensaje al WhatsApp que diste.</li>
+            <li className="flex gap-2"><span className="font-bold text-[#E8889A]">2.</span> Confirmamos el pedido y te mandamos el link para pagar la seña.</li>
+            <li className="flex gap-2"><span className="font-bold text-[#E8889A]">3.</span> Una vez abonada, ¡tu pedido entra en producción! 🍪</li>
+          </ol>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <a
+            href={`https://wa.me/5491100000000?text=Hola! Hice el pedido %23${order.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3.5 rounded-full text-center transition-colors"
+          >
+            💬 Escribirnos por WhatsApp
+          </a>
+          <Link
+            to="/"
+            className="w-full border-2 border-[#D4A76A] text-[#7C4A2D] font-semibold py-3.5 rounded-full text-center hover:bg-[#F5E8D0] transition-colors"
+          >
+            Volver al inicio
+          </Link>
+        </div>
+
+        <p className="text-center text-xs text-[#C4A882] mt-6">
+          🐱 Gracias por tu pedido. Ayudaste a un gatito hoy.
+        </p>
+      </div>
+    </div>
+  )
+}
