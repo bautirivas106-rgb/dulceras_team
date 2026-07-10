@@ -12,6 +12,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from .models import Notification, WhatsAppLog
+from . import email_service
 
 
 def _normalize_phone(phone: str) -> str:
@@ -73,6 +74,7 @@ def notify_new_order(tenant, order):
     )
     _whatsapp_new_order(tenant, order)
     _whatsapp_order_received_customer(tenant, order)
+    email_service.send_order_confirmation(tenant, order)
 
 
 def notify_payment_received(tenant, order, mp_payment_id=''):
@@ -89,6 +91,7 @@ def notify_payment_received(tenant, order, mp_payment_id=''):
     )
     _whatsapp_payment_received(tenant, order)
     _whatsapp_payment_confirmed_customer(tenant, order)
+    email_service.send_payment_confirmed(tenant, order)
 
 
 def notify_order_status(tenant, order, from_status, to_status, changed_by=None):
@@ -100,6 +103,10 @@ def notify_order_status(tenant, order, from_status, to_status, changed_by=None):
         f'Estado actualizado por {actor}: {from_status} → {to_status}.',
         order=order,
     )
+    if to_status == 'ready':
+        email_service.send_order_ready(tenant, order)
+    elif to_status == 'cancelled':
+        email_service.send_order_cancelled(tenant, order)
 
 
 # ── WhatsApp ──────────────────────────────────────────────────────────────────
