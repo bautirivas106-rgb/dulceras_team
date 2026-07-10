@@ -1,15 +1,29 @@
-import { useState } from 'react'
-import { useLocation, Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useParams, Link } from 'react-router-dom'
 import type { OrderDetail } from '../../types/orders'
 import { initiatePayment } from '../../api/payments'
+import { getOrder } from '../../api/orders'
+
+const TENANT = 'dulceras-team'
 
 export default function OrderConfirmation() {
+  const { id } = useParams<{ id: string }>()
   const { state } = useLocation() as { state: { order: OrderDetail } | null }
-  const order = state?.order
+
+  const [order, setOrder] = useState<OrderDetail | null>(state?.order ?? null)
+  const [loadError, setLoadError] = useState(false)
   const [paying, setPaying] = useState(false)
   const [payError, setPayError] = useState('')
 
-  if (!order) {
+  useEffect(() => {
+    if (!order && id) {
+      getOrder(TENANT, Number(id))
+        .then(setOrder)
+        .catch(() => setLoadError(true))
+    }
+  }, [id, order])
+
+  if (loadError) {
     return (
       <div className="min-h-screen bg-[#FDF6EC] flex items-center justify-center px-4">
         <div className="text-center">
@@ -19,6 +33,14 @@ export default function OrderConfirmation() {
             Volver al inicio
           </Link>
         </div>
+      </div>
+    )
+  }
+
+  if (!order) {
+    return (
+      <div className="min-h-screen bg-[#FDF6EC] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[#E8889A] border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -45,6 +67,8 @@ export default function OrderConfirmation() {
     }
   }
 
+  const isPaid = !['pending_deposit'].includes(order.status)
+
   return (
     <div className="min-h-screen bg-[#FDF6EC] px-4 py-12">
       <div className="max-w-md mx-auto">
@@ -52,13 +76,15 @@ export default function OrderConfirmation() {
         {/* Éxito */}
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
-            ✅
+            {isPaid ? '🎉' : '✅'}
           </div>
           <h1 className="text-2xl font-bold text-[#3D1A0E] mb-2">
-            ¡Pedido recibido!
+            {isPaid ? '¡Seña confirmada!' : '¡Pedido recibido!'}
           </h1>
           <p className="text-[#7C4A2D]">
-            Para confirmar tu lugar, pagá la seña ahora por Mercado Pago.
+            {isPaid
+              ? 'Tu pago fue procesado. ¡Nos ponemos en contacto pronto!'
+              : 'Para confirmar tu lugar, pagá la seña ahora por Mercado Pago.'}
           </p>
         </div>
 
@@ -78,11 +104,11 @@ export default function OrderConfirmation() {
           <div className="space-y-2 mb-4">
             {order.items.map((item) => (
               <div key={item.id} className="flex justify-between text-sm">
-                <span className="text-[#7C4A2D]">
+                <span className="text-[#7C4A2D] flex-1 pr-2">
                   {item.product_name} ×{item.quantity}
                   <span className="block text-xs text-[#C4A882]">{item.variant_name}</span>
                 </span>
-                <span className="font-semibold text-[#3D1A0E]">
+                <span className="font-semibold text-[#3D1A0E] whitespace-nowrap">
                   ${Number(item.subtotal).toLocaleString('es-AR')}
                 </span>
               </div>
@@ -112,7 +138,7 @@ export default function OrderConfirmation() {
 
           {/* Seña */}
           <div className="mt-4 bg-[#F7D0D8] rounded-xl px-4 py-4 text-center">
-            <p className="text-xs font-semibold text-[#7C4A2D] mb-1">Seña a pagar ahora</p>
+            <p className="text-xs font-semibold text-[#7C4A2D] mb-1">Seña</p>
             <p className="text-3xl font-bold text-[#E8889A]">
               ${Number(order.deposit_amount).toLocaleString('es-AR')}
             </p>
@@ -129,20 +155,22 @@ export default function OrderConfirmation() {
 
         {/* CTAs */}
         <div className="flex flex-col gap-3">
-          <button
-            onClick={handlePay}
-            disabled={paying}
-            className="w-full bg-[#009ee3] hover:bg-[#007ab8] disabled:opacity-60 text-white font-bold py-4 rounded-full transition-colors shadow-md text-base flex items-center justify-center gap-2"
-          >
-            {paying ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Redirigiendo a Mercado Pago...
-              </>
-            ) : (
-              <>💳 Pagar seña con Mercado Pago</>
-            )}
-          </button>
+          {!isPaid && (
+            <button
+              onClick={handlePay}
+              disabled={paying}
+              className="w-full bg-[#009ee3] hover:bg-[#007ab8] disabled:opacity-60 text-white font-bold py-4 rounded-full transition-colors shadow-md text-base flex items-center justify-center gap-2"
+            >
+              {paying ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Redirigiendo a Mercado Pago...
+                </>
+              ) : (
+                <>💳 Pagar seña con Mercado Pago</>
+              )}
+            </button>
+          )}
 
           <a
             href={`https://wa.me/5491100000000?text=Hola! Hice el pedido %23${order.id}`}

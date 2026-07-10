@@ -21,7 +21,7 @@ def build_mp_preference(payment_intent, tenant_slug, frontend_url, notification_
     return {
         "items": [
             {
-                "title": f"Sena - Pedido #{order.id}",
+                "title": f"Seña - Pedido #{order.id}",
                 "quantity": 1,
                 "unit_price": float(payment_intent.amount),
                 "currency_id": "ARS",
@@ -32,6 +32,7 @@ def build_mp_preference(payment_intent, tenant_slug, frontend_url, notification_
             "failure": f"{frontend_url}/payment/failure/?order_id={order.id}",
             "pending": f"{frontend_url}/payment/pending/?order_id={order.id}",
         },
+        "auto_return": "approved",
         "external_reference": str(payment_intent.id),
         "notification_url": notification_url,
     }
