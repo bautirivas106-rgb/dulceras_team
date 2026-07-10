@@ -4,7 +4,7 @@ from django.conf.urls.static import static
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from tenants.urls import public_urlpatterns as tenants_public
+from tenants.urls import public_urlpatterns as tenants_public, superadmin_urlpatterns
 from catalog.urls import public_urlpatterns as catalog_public, admin_urlpatterns as catalog_admin
 from orders.urls import public_urlpatterns as orders_public, admin_urlpatterns as orders_admin
 from customers.urls import admin_urlpatterns as customers_admin
@@ -30,6 +30,9 @@ urlpatterns = [
     path('api/admin/customers/', include(customers_admin)),
     path('api/admin/', include(payments_admin)),
     path('api/admin/', include(notifications_admin)),
+
+    # Superadmin (platform_owner only)
+    path('api/superadmin/', include(superadmin_urlpatterns)),
 ]
 
 if settings.DEBUG:
