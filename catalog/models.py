@@ -23,6 +23,11 @@ class Product(TenantModel):
     description = models.TextField(blank=True)
     image = models.ImageField(upload_to='products/', blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    made_to_order = models.BooleanField(
+        default=True,
+        help_text='Si está activo, se fabrica bajo pedido (sin control de stock). '
+                  'Si está desactivado, requiere stock disponible para poder ordenarse.',
+    )
     requires_advance_hours = models.PositiveIntegerField(default=48)
     sort_order = models.PositiveIntegerField(default=0)
 

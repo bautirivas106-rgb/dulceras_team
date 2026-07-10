@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import {
   getCategories, getProducts, deleteProduct, updateCategory, deleteCategory,
-  type CatalogCategory, type CatalogProduct,
+  updateStock, updateMadeToOrder,
+  type CatalogCategory, type CatalogProduct, type CatalogVariant,
 } from '../../../api/catalogApi'
 import CategoryModal from './CategoryModal'
 import ProductModal from './ProductModal'
 
-type Tab = 'products' | 'categories'
+type Tab = 'products' | 'categories' | 'stock'
 
 function Badge({ active }: { active: boolean }) {
   return (
@@ -118,7 +119,7 @@ export default function CatalogPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
-        {(['products', 'categories'] as Tab[]).map((t) => (
+        {(['products', 'categories', 'stock'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -126,7 +127,7 @@ export default function CatalogPage() {
               tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            {t === 'products' ? `Productos (${products.length})` : `Categorías (${categories.length})`}
+            {t === 'products' ? `Productos (${products.length})` : t === 'categories' ? `Categorías (${categories.length})` : 'Stock'}
           </button>
         ))}
       </div>
@@ -291,6 +292,10 @@ export default function CatalogPage() {
               )}
             </div>
           )}
+          {/* ── Stock tab ── */}
+          {tab === 'stock' && (
+            <StockPanel products={products} onUpdated={reload} />
+          )}
         </>
       )}
 
@@ -311,6 +316,157 @@ export default function CatalogPage() {
           onSaved={() => { setProdModal(null); reload() }}
         />
       )}
+    </div>
+  )
+}
+
+// ── Stock panel ────────────────────────────────────────────────────────────────
+
+function StockPanel({ products, onUpdated }: { products: CatalogProduct[]; onUpdated: () => void }) {
+  const [editing, setEditing] = useState<Record<number, string>>({})
+  const [saving, setSaving] = useState<Record<number, boolean>>({})
+  const [toggling, setToggling] = useState<Record<number, boolean>>({})
+  const inputRefs = useRef<Record<number, HTMLInputElement | null>>({})
+
+  function startEdit(v: CatalogVariant) {
+    setEditing((e) => ({ ...e, [v.id]: String(v.stock_quantity) }))
+    setTimeout(() => inputRefs.current[v.id]?.select(), 50)
+  }
+
+  async function saveStock(variantId: number) {
+    const qty = parseInt(editing[variantId] ?? '', 10)
+    if (isNaN(qty) || qty < 0) return
+    setSaving((s) => ({ ...s, [variantId]: true }))
+    try {
+      await updateStock(variantId, qty)
+      onUpdated()
+    } catch {}
+    setSaving((s) => ({ ...s, [variantId]: false }))
+    setEditing((e) => { const n = { ...e }; delete n[variantId]; return n })
+  }
+
+  async function toggleMadeToOrder(prod: CatalogProduct) {
+    setToggling((t) => ({ ...t, [prod.id]: true }))
+    try {
+      await updateMadeToOrder(prod.id, !prod.made_to_order)
+      onUpdated()
+    } catch {}
+    setToggling((t) => ({ ...t, [prod.id]: false }))
+  }
+
+  const stockProducts = products.filter((p) => p.variants.length > 0)
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-500">
+        Productos con <strong>Bajo pedido desactivado</strong> requieren stock disponible para poder ordenarse.
+        Hacé clic en la cantidad para editarla.
+      </p>
+
+      {stockProducts.length === 0 && (
+        <p className="text-gray-400 text-sm text-center py-12">Sin productos con variantes.</p>
+      )}
+
+      {stockProducts.map((prod) => (
+        <div key={prod.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50 bg-gray-50/60">
+            <div>
+              <span className="font-semibold text-gray-800 text-sm">{prod.name}</span>
+              <span className="ml-2 text-xs text-gray-400">{prod.category_name}</span>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <span className="text-xs text-gray-500">Bajo pedido</span>
+              <button
+                onClick={() => toggleMadeToOrder(prod)}
+                disabled={toggling[prod.id]}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                  prod.made_to_order ? 'bg-[#E8889A]' : 'bg-gray-300'
+                } ${toggling[prod.id] ? 'opacity-50' : ''}`}
+              >
+                <span
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                    prod.made_to_order ? 'translate-x-5' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </label>
+          </div>
+
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-50">
+                <th className="text-left px-4 py-2 text-xs font-medium text-gray-400">Variante</th>
+                <th className="text-right px-4 py-2 text-xs font-medium text-gray-400">Precio</th>
+                <th className="text-right px-4 py-2 text-xs font-medium text-gray-400 w-32">Stock</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {prod.variants.filter((v) => v.is_active).map((v) => {
+                const isEditing = v.id in editing
+                const isSaving = saving[v.id]
+                const stockOk = prod.made_to_order || v.stock_quantity > 0
+                return (
+                  <tr key={v.id} className="hover:bg-gray-50/50">
+                    <td className="px-4 py-2.5 text-gray-700">{v.name}</td>
+                    <td className="px-4 py-2.5 text-right text-gray-500">
+                      ${Number(v.price).toLocaleString('es-AR')}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      {prod.made_to_order ? (
+                        <span className="text-xs text-gray-400 italic">Ilimitado</span>
+                      ) : isEditing ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <input
+                            ref={(el) => { inputRefs.current[v.id] = el }}
+                            type="number"
+                            min={0}
+                            value={editing[v.id]}
+                            onChange={(e) => setEditing((ed) => ({ ...ed, [v.id]: e.target.value }))}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveStock(v.id)
+                              if (e.key === 'Escape') setEditing((ed) => { const n = { ...ed }; delete n[v.id]; return n })
+                            }}
+                            className="w-16 text-right border border-[#E8889A] rounded px-2 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#E8889A]"
+                          />
+                          <button
+                            onClick={() => saveStock(v.id)}
+                            disabled={isSaving}
+                            className="text-[10px] bg-[#E8889A] text-white px-2 py-1 rounded font-medium hover:bg-[#d9768a] disabled:opacity-50"
+                          >
+                            {isSaving ? '...' : 'OK'}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEdit(v)}
+                          className={`font-semibold tabular-nums px-2 py-0.5 rounded hover:bg-gray-100 transition-colors ${
+                            stockOk ? 'text-gray-800' : 'text-red-500'
+                          }`}
+                          title="Clic para editar"
+                        >
+                          {v.stock_quantity === 0 ? (
+                            <span className="flex items-center gap-1">
+                              <span>0</span>
+                              <span className="text-[10px] bg-red-100 text-red-500 px-1 rounded">Agotado</span>
+                            </span>
+                          ) : v.stock_quantity <= 3 ? (
+                            <span className="flex items-center gap-1">
+                              <span>{v.stock_quantity}</span>
+                              <span className="text-[10px] bg-amber-100 text-amber-600 px-1 rounded">Bajo</span>
+                            </span>
+                          ) : (
+                            v.stock_quantity
+                          )}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      ))}
     </div>
   )
 }

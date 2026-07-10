@@ -13,7 +13,7 @@ class CategoryPublicSerializer(serializers.ModelSerializer):
 class ProductVariantPublicSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductVariant
-        fields = ('id', 'name', 'price')
+        fields = ('id', 'name', 'price', 'stock_quantity')
 
 
 class ProductPublicSerializer(serializers.ModelSerializer):
@@ -25,7 +25,7 @@ class ProductPublicSerializer(serializers.ModelSerializer):
         model = Product
         fields = (
             'id', 'name', 'description', 'image_url',
-            'requires_advance_hours', 'category', 'variants',
+            'requires_advance_hours', 'made_to_order', 'category', 'variants',
         )
 
     def get_variants(self, obj):
@@ -67,7 +67,7 @@ class ProductAdminSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'tenant', 'category', 'category_name',
             'name', 'description', 'image',
-            'is_active', 'requires_advance_hours', 'sort_order',
+            'is_active', 'made_to_order', 'requires_advance_hours', 'sort_order',
             'variants', 'created_at', 'updated_at',
         )
         read_only_fields = ('tenant', 'created_at', 'updated_at')

@@ -9,7 +9,7 @@ export interface ProductVariant {
   id: number
   name: string
   price: string
-  stock_quantity?: number
+  stock_quantity: number
   is_active?: boolean
 }
 
@@ -20,6 +20,7 @@ export interface Product {
   image: string | null
   image_url: string | null
   requires_advance_hours: number
+  made_to_order: boolean
   sort_order?: number
   category: Category | number
   category_name?: string

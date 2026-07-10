@@ -7,12 +7,19 @@ interface Props {
   onClose: () => void
 }
 
+function isVariantAvailable(v: ProductVariant, madeToOrder: boolean) {
+  if (v.is_active === false) return false
+  if (!madeToOrder && v.stock_quantity === 0) return false
+  return true
+}
+
 export default function ProductModal({ product, onClose }: Props) {
-  // Public API only returns active variants; is_active may be undefined — treat absent as true
   const activeVariants = product.variants.filter((v) => v.is_active !== false)
-  const [selected, setSelected] = useState<ProductVariant | null>(activeVariants[0] ?? null)
+  const firstAvailable = activeVariants.find((v) => isVariantAvailable(v, product.made_to_order)) ?? activeVariants[0] ?? null
+  const [selected, setSelected] = useState<ProductVariant | null>(firstAvailable)
   const [added, setAdded] = useState(false)
   const { addItem } = useCart()
+  const selectedAvailable = selected ? isVariantAvailable(selected, product.made_to_order) : false
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -79,30 +86,43 @@ export default function ProductModal({ product, onClose }: Props) {
                 Elegí tu tamaño
               </p>
               <div className="flex flex-col gap-2">
-                {activeVariants.map((v) => (
-                  <label
-                    key={v.id}
-                    className={`flex items-center justify-between p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                      selected?.id === v.id
-                        ? 'border-[#E8889A] bg-[#FFF0F3]'
-                        : 'border-[#F5E8D0] bg-white hover:border-[#D4A76A]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="variant"
-                        checked={selected?.id === v.id}
-                        onChange={() => setSelected(v)}
-                        className="accent-[#E8889A]"
-                      />
-                      <span className="text-sm font-medium text-[#3D1A0E]">{v.name}</span>
-                    </div>
-                    <span className="text-sm font-bold text-[#E8889A]">
-                      ${Number(v.price).toLocaleString('es-AR')}
-                    </span>
-                  </label>
-                ))}
+                {activeVariants.map((v) => {
+                  const available = isVariantAvailable(v, product.made_to_order)
+                  const lowStock = !product.made_to_order && v.stock_quantity > 0 && v.stock_quantity <= 3
+                  return (
+                    <label
+                      key={v.id}
+                      className={`flex items-center justify-between p-3 rounded-xl border-2 transition-all ${
+                        !available
+                          ? 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
+                          : selected?.id === v.id
+                          ? 'border-[#E8889A] bg-[#FFF0F3] cursor-pointer'
+                          : 'border-[#F5E8D0] bg-white hover:border-[#D4A76A] cursor-pointer'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="variant"
+                          checked={selected?.id === v.id}
+                          onChange={() => available && setSelected(v)}
+                          disabled={!available}
+                          className="accent-[#E8889A]"
+                        />
+                        <div>
+                          <span className={`text-sm font-medium ${available ? 'text-[#3D1A0E]' : 'text-gray-400 line-through'}`}>
+                            {v.name}
+                          </span>
+                          {!available && <span className="ml-2 text-[10px] text-gray-400">Agotado</span>}
+                          {lowStock && <span className="ml-2 text-[10px] text-amber-600 font-semibold">¡Últimas {v.stock_quantity}!</span>}
+                        </div>
+                      </div>
+                      <span className={`text-sm font-bold ${available ? 'text-[#E8889A]' : 'text-gray-300'}`}>
+                        ${Number(v.price).toLocaleString('es-AR')}
+                      </span>
+                    </label>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -122,12 +142,14 @@ export default function ProductModal({ product, onClose }: Props) {
             className={`w-full font-bold py-3.5 rounded-full transition-all text-base shadow-md ${
               added
                 ? 'bg-green-500 text-white'
+                : !selectedAvailable
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-[#E8889A] hover:bg-[#d9768a] text-white'
             }`}
             onClick={handleAdd}
-            disabled={!selected || added}
+            disabled={!selected || added || !selectedAvailable}
           >
-            {added ? '¡Agregado! ✓' : 'Agregar al pedido 🛒'}
+            {added ? '¡Agregado! ✓' : !selectedAvailable ? 'Sin stock' : 'Agregar al pedido 🛒'}
           </button>
           <button
             onClick={onClose}

@@ -106,6 +106,16 @@ class PublicOrderDetailView(APIView):
 
 # ── Admin ─────────────────────────────────────────────────────────────────────
 
+def _restore_stock(order):
+    from catalog.models import ProductVariant
+    for item in order.items.select_related('product_variant__product').all():
+        variant = item.product_variant
+        if variant and not variant.product.made_to_order:
+            ProductVariant.objects.filter(pk=variant.pk).update(
+                stock_quantity=variant.stock_quantity + item.quantity
+            )
+
+
 class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'patch', 'head', 'options']
@@ -181,6 +191,9 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
         )
         order.status = new_status
         order.save(update_fields=['status', 'updated_at'])
+
+        if new_status in (Order.CANCELLED, Order.REFUNDED) and prev_status not in (Order.CANCELLED, Order.REFUNDED):
+            _restore_stock(order)
 
         try:
             from notifications.services import notify_order_status

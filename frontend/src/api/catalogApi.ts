@@ -27,6 +27,7 @@ export interface CatalogProduct {
   category: number
   category_name: string
   is_active: boolean
+  made_to_order: boolean
   requires_advance_hours: number
   sort_order: number
   variants: CatalogVariant[]
@@ -75,3 +76,9 @@ export const updateVariant = (id: number, data: Partial<CatalogVariant>) =>
 
 export const deleteVariant = (id: number) =>
   adminClient.delete(`/api/admin/catalog/variants/${id}/`)
+
+export const updateStock = (variantId: number, quantity: number) =>
+  adminClient.patch<CatalogVariant>(`/api/admin/catalog/variants/${variantId}/`, { stock_quantity: quantity })
+
+export const updateMadeToOrder = (productId: number, madeToOrder: boolean) =>
+  adminClient.patch<CatalogProduct>(`/api/admin/catalog/products/${productId}/`, { made_to_order: madeToOrder })

@@ -98,7 +98,7 @@ class OrderCreateSerializer(serializers.Serializer):
         if not items:
             raise serializers.ValidationError({'items': 'El pedido debe tener al menos un producto.'})
 
-        # Validar variantes y calcular anticipación máxima requerida
+        # Validar variantes, anticipación y stock
         max_advance_hours = 0
         for i, item in enumerate(items):
             try:
@@ -106,6 +106,13 @@ class OrderCreateSerializer(serializers.Serializer):
                     pk=item['variant_id'], tenant=tenant, is_active=True
                 )
                 max_advance_hours = max(max_advance_hours, variant.product.requires_advance_hours)
+                if not variant.product.made_to_order:
+                    if variant.stock_quantity < item['quantity']:
+                        available = variant.stock_quantity
+                        errors[f'items_{i}_quantity'] = (
+                            f'Stock insuficiente para "{variant.product.name} — {variant.name}". '
+                            f'Disponible: {available}.'
+                        )
             except ProductVariant.DoesNotExist:
                 errors[f'items_{i}_variant_id'] = f'Variante {item["variant_id"]} no disponible.'
 
@@ -168,12 +175,27 @@ class OrderCreateSerializer(serializers.Serializer):
                     pass
 
         # Recalcular precios desde DB (no confiar en el frontend)
+        # select_for_update bloquea las filas de variante para evitar race conditions de stock
         subtotal = 0
         item_rows = []
         for item in validated_data['items']:
-            variant = ProductVariant.objects.select_related('product').get(
-                pk=item['variant_id'], tenant=tenant
+            variant = (
+                ProductVariant.objects
+                .select_related('product')
+                .select_for_update()
+                .get(pk=item['variant_id'], tenant=tenant)
             )
+            if not variant.product.made_to_order:
+                if variant.stock_quantity < item['quantity']:
+                    raise serializers.ValidationError({
+                        f'items_stock': (
+                            f'Stock insuficiente para "{variant.product.name} — {variant.name}". '
+                            f'Disponible: {variant.stock_quantity}.'
+                        )
+                    })
+                ProductVariant.objects.filter(pk=variant.pk).update(
+                    stock_quantity=variant.stock_quantity - item['quantity']
+                )
             line_total = variant.price * item['quantity']
             subtotal += line_total
             item_rows.append({
