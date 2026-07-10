@@ -8,6 +8,7 @@ from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
 
 from .models import BusinessProfile, Tenant, DeliveryZone
 
@@ -241,6 +242,41 @@ class SuperadminTenantViewSet(viewsets.ViewSet):
             'total_users': total_users,
             'by_tenant': by_tenant,
         })
+
+
+# ── Admin delivery zones ──────────────────────────────────────────────────────
+
+class AdminDeliveryZoneSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeliveryZone
+        fields = ('id', 'name', 'description', 'price', 'is_active')
+
+
+class AdminDeliveryZoneViewSet(viewsets.ModelViewSet):
+    serializer_class = AdminDeliveryZoneSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_platform_owner:
+            slug = self.request.query_params.get('tenant')
+            if slug:
+                tenant = get_object_or_404(Tenant, slug=slug)
+                return DeliveryZone.objects.filter(tenant=tenant).order_by('price')
+            if user.tenant:
+                return DeliveryZone.objects.filter(tenant=user.tenant).order_by('price')
+            return DeliveryZone.objects.none()
+        return DeliveryZone.objects.filter(tenant=user.tenant).order_by('price')
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.is_platform_owner:
+            slug = self.request.query_params.get('tenant')
+            tenant = get_object_or_404(Tenant, slug=slug) if slug else user.tenant
+        else:
+            tenant = user.tenant
+        serializer.save(tenant=tenant)
 
 
 # ── Admin settings (tenant propio) ───────────────────────────────────────────
