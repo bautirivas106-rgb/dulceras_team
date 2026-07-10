@@ -207,7 +207,9 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
         user = self.request.user
         if user.is_platform_owner:
             slug = self.request.query_params.get('tenant')
-            return get_object_or_404(Tenant, slug=slug, is_active=True) if slug else None
+            if slug:
+                return get_object_or_404(Tenant, slug=slug, is_active=True)
+            return user.tenant  # fallback al tenant propio del platform_owner
         return user.tenant
 
     @action(detail=False, methods=['get'], url_path='calendar')
