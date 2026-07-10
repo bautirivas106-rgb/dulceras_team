@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from tenants.models import Tenant, BusinessProfile, DeliveryZone
+from tenants.models import Plan, Tenant, BusinessProfile, DeliveryZone
 from catalog.models import Category, Product, ProductVariant
 
 User = get_user_model()
@@ -162,12 +162,48 @@ class Command(BaseCommand):
             Tenant.objects.filter(slug=TENANT_SLUG).delete()
             self.stdout.write(self.style.WARNING('Tenant Dulceras Team eliminado.'))
 
+        # Plans
+        PLANS = [
+            {
+                'slug': 'basico', 'name': 'Básico',
+                'price_monthly': Decimal('0'),
+                'description': 'Para empezar. Ideal para emprendimientos chicos.',
+                'max_products': 10, 'max_users': 2, 'max_orders_per_day': 20,
+                'has_mp_integration': False, 'has_whatsapp': False,
+            },
+            {
+                'slug': 'pro', 'name': 'Pro',
+                'price_monthly': Decimal('15000'),
+                'description': 'Para negocios en crecimiento. Incluye Mercado Pago y WhatsApp.',
+                'max_products': 50, 'max_users': 5, 'max_orders_per_day': 0,
+                'has_mp_integration': True, 'has_whatsapp': True,
+            },
+            {
+                'slug': 'enterprise', 'name': 'Enterprise',
+                'price_monthly': Decimal('35000'),
+                'description': 'Sin límites. Para negocios consolidados.',
+                'max_products': 0, 'max_users': 0, 'max_orders_per_day': 0,
+                'has_mp_integration': True, 'has_whatsapp': True,
+            },
+        ]
+        for plan_data in PLANS:
+            slug = plan_data.pop('slug')
+            obj, created = Plan.objects.update_or_create(
+                slug=slug,
+                defaults=plan_data,
+            )
+            self.stdout.write(f"  {'+' if created else '~'} Plan: {obj.name} (${obj.price_monthly}/mes)")
+
         # Tenant
+        pro_plan = Plan.objects.get(slug='pro')
         tenant, created = Tenant.objects.get_or_create(
             slug=TENANT_SLUG,
-            defaults={'name': 'Dulceras Team', 'is_active': True},
+            defaults={'name': 'Dulceras Team', 'is_active': True, 'plan': pro_plan},
         )
-        self.stdout.write(f"{'Creado' if created else 'Existente'}: Tenant '{tenant.name}'")
+        if not created and tenant.plan is None:
+            tenant.plan = pro_plan
+            tenant.save(update_fields=['plan'])
+        self.stdout.write(f"{'Creado' if created else 'Existente'}: Tenant '{tenant.name}' (plan: {tenant.plan})")
 
         # Business profile
         BusinessProfile.objects.get_or_create(

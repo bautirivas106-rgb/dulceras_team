@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 
-from .models import BusinessProfile, Tenant, DeliveryZone
+from .models import BusinessProfile, Plan, Tenant, DeliveryZone
 
 User = get_user_model()
 
@@ -51,14 +51,21 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
         )
 
 
+class TenantPlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Plan
+        fields = ('id', 'name', 'slug', 'price_monthly')
+
+
 class TenantListSerializer(serializers.ModelSerializer):
     profile = BusinessProfileSerializer(read_only=True)
+    plan = TenantPlanSerializer(read_only=True)
     order_count = serializers.IntegerField(read_only=True)
     user_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Tenant
-        fields = ('id', 'name', 'slug', 'is_active', 'profile', 'order_count', 'user_count', 'created_at')
+        fields = ('id', 'name', 'slug', 'is_active', 'plan', 'profile', 'order_count', 'user_count', 'created_at')
         read_only_fields = ('id', 'created_at')
 
 
@@ -198,6 +205,14 @@ class SuperadminTenantViewSet(viewsets.ViewSet):
     @action(detail=True, methods=['post'], url_path='users')
     def add_user(self, request, pk=None):
         tenant = get_object_or_404(Tenant, pk=pk)
+        plan = tenant.plan
+        if plan and plan.max_users > 0:
+            current = User.objects.filter(tenant=tenant).count()
+            if current >= plan.max_users:
+                return Response(
+                    {'detail': f'El plan "{plan.name}" permite hasta {plan.max_users} usuario(s). Actualizá el plan para agregar más.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         serializer = UserCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         d = serializer.validated_data
@@ -209,6 +224,18 @@ class SuperadminTenantViewSet(viewsets.ViewSet):
             role=d['role'],
         )
         return Response(TenantUserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['patch'], url_path='plan')
+    def assign_plan(self, request, pk=None):
+        tenant = get_object_or_404(Tenant, pk=pk)
+        plan_id = request.data.get('plan_id')
+        if plan_id is None:
+            tenant.plan = None
+        else:
+            tenant.plan = get_object_or_404(Plan, pk=plan_id)
+        tenant.save(update_fields=['plan'])
+        annotated = self._annotate_tenants(Tenant.objects.filter(pk=tenant.pk)).first()
+        return Response(TenantListSerializer(annotated).data)
 
     @action(detail=False, methods=['get'], url_path='metrics')
     def metrics(self, request):
@@ -242,6 +269,35 @@ class SuperadminTenantViewSet(viewsets.ViewSet):
             'total_users': total_users,
             'by_tenant': by_tenant,
         })
+
+
+# ── Plans ─────────────────────────────────────────────────────────────────────
+
+class PlanSerializer(serializers.ModelSerializer):
+    tenant_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Plan
+        fields = (
+            'id', 'name', 'slug', 'price_monthly', 'description',
+            'max_products', 'max_users', 'max_orders_per_day',
+            'has_mp_integration', 'has_whatsapp', 'is_active',
+            'tenant_count', 'created_at',
+        )
+        read_only_fields = ('id', 'created_at')
+
+
+class PlanViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsPlatformOwner]
+    serializer_class = PlanSerializer
+
+    def get_queryset(self):
+        from django.db.models import Count as DjCount
+        return (
+            Plan.objects
+            .annotate(tenant_count=DjCount('tenant', distinct=True))
+            .order_by('price_monthly')
+        )
 
 
 # ── Admin delivery zones ──────────────────────────────────────────────────────

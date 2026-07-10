@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getTenant, toggleTenant, updateTenantProfile, addTenantUser, type TenantDetail } from '../../api/superadminApi'
+import { getTenant, toggleTenant, updateTenantProfile, addTenantUser, getPlans, assignPlan, type TenantDetail, type Plan } from '../../api/superadminApi'
 
 const ROLE_LABELS: Record<string, string> = {
   platform_owner: 'Platform Owner',
@@ -65,6 +65,9 @@ export default function TenantDetailPage() {
           {tenant.is_active ? 'Desactivar' : 'Activar'}
         </button>
       </div>
+
+      {/* Plan */}
+      <PlanSection tenantId={tenant.id} currentPlan={tenant.plan ?? null} onChanged={reload} />
 
       {/* KPIs */}
       <div className="grid grid-cols-3 gap-4">
@@ -136,6 +139,68 @@ export default function TenantDetailPage() {
           onClose={() => setShowUserForm(false)}
           onAdded={() => { setShowUserForm(false); reload() }}
         />
+      )}
+    </div>
+  )
+}
+
+function PlanSection({
+  tenantId, currentPlan, onChanged,
+}: {
+  tenantId: number
+  currentPlan: Pick<Plan, 'id' | 'name' | 'slug' | 'price_monthly'> | null
+  onChanged: () => void
+}) {
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [selected, setSelected] = useState<string>(String(currentPlan?.id ?? ''))
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    getPlans().then(r => setPlans(r.data)).catch(() => {})
+  }, [])
+
+  async function handleSave() {
+    setSaving(true)
+    await assignPlan(tenantId, selected ? Number(selected) : null)
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+    onChanged()
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-5">
+      <h2 className="font-semibold text-gray-800 mb-3">Plan de suscripción</h2>
+      <div className="flex items-center gap-3">
+        <select
+          value={selected}
+          onChange={e => setSelected(e.target.value)}
+          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+        >
+          <option value="">Sin plan asignado</option>
+          {plans.map(p => (
+            <option key={p.id} value={p.id}>
+              {p.name} — ${Number(p.price_monthly).toLocaleString('es-AR')}/mes
+              {p.max_products > 0 ? ` · ${p.max_products} prods` : ' · prods ∞'}
+              {p.max_users > 0 ? ` · ${p.max_users} users` : ' · users ∞'}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap ${
+            saved ? 'bg-green-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50'
+          }`}
+        >
+          {saved ? '✓ Guardado' : saving ? 'Guardando...' : 'Asignar plan'}
+        </button>
+      </div>
+      {currentPlan && (
+        <p className="text-xs text-gray-400 mt-2">
+          Plan actual: <strong className="text-gray-600">{currentPlan.name}</strong>
+        </p>
       )}
     </div>
   )

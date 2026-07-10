@@ -25,6 +25,7 @@ import SuperadminLayout from './pages/superadmin/SuperadminLayout'
 import MetricsPage from './pages/superadmin/MetricsPage'
 import TenantsPage from './pages/superadmin/TenantsPage'
 import TenantDetailPage from './pages/superadmin/TenantDetailPage'
+import PlansPage from './pages/superadmin/PlansPage'
 
 export default function App() {
   return (
@@ -76,6 +77,7 @@ export default function App() {
               <Route path="metrics" element={<MetricsPage />} />
               <Route path="tenants" element={<TenantsPage />} />
               <Route path="tenants/:id" element={<TenantDetailPage />} />
+              <Route path="plans" element={<PlansPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

@@ -2,10 +2,43 @@ from django.db import models
 from core.models import TimeStampedModel, TenantModel
 
 
+class Plan(TimeStampedModel):
+    BASICO = 'basico'
+    PRO = 'pro'
+    ENTERPRISE = 'enterprise'
+
+    SLUG_CHOICES = [
+        (BASICO, 'Básico'),
+        (PRO, 'Pro'),
+        (ENTERPRISE, 'Enterprise'),
+    ]
+
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+    price_monthly = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # 0 = sin límite
+    max_products = models.PositiveIntegerField(default=0)
+    max_users = models.PositiveIntegerField(default=0)
+    max_orders_per_day = models.PositiveIntegerField(default=0)
+    has_mp_integration = models.BooleanField(default=True)
+    has_whatsapp = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    description = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['price_monthly']
+
+    def __str__(self):
+        return self.name
+
+
 class Tenant(TimeStampedModel):
     name = models.CharField(max_length=200)
     slug = models.SlugField(unique=True)
     is_active = models.BooleanField(default=True)
+    plan = models.ForeignKey(
+        Plan, null=True, blank=True, on_delete=models.SET_NULL, related_name='+'
+    )
 
     def __str__(self):
         return self.name

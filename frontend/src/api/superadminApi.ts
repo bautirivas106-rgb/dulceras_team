@@ -1,5 +1,21 @@
 import adminClient from './adminClient'
 
+export interface Plan {
+  id: number
+  name: string
+  slug: string
+  price_monthly: string
+  description: string
+  max_products: number
+  max_users: number
+  max_orders_per_day: number
+  has_mp_integration: boolean
+  has_whatsapp: boolean
+  is_active: boolean
+  tenant_count: number
+  created_at: string
+}
+
 export interface TenantProfile {
   address: string
   phone: string
@@ -16,6 +32,7 @@ export interface SuperadminTenant {
   name: string
   slug: string
   is_active: boolean
+  plan: Pick<Plan, 'id' | 'name' | 'slug' | 'price_monthly'> | null
   profile: TenantProfile | null
   order_count: number | null
   user_count: number | null
@@ -82,3 +99,20 @@ export const addTenantUser = (
 
 export const getMetrics = () =>
   adminClient.get<PlatformMetrics>(`${BASE}/metrics/`)
+
+const PLANS_BASE = '/api/superadmin/plans'
+
+export const getPlans = () =>
+  adminClient.get<Plan[]>(`${PLANS_BASE}/`)
+
+export const createPlan = (data: Omit<Plan, 'id' | 'tenant_count' | 'created_at'>) =>
+  adminClient.post<Plan>(`${PLANS_BASE}/`, data)
+
+export const updatePlan = (id: number, data: Partial<Plan>) =>
+  adminClient.patch<Plan>(`${PLANS_BASE}/${id}/`, data)
+
+export const deletePlan = (id: number) =>
+  adminClient.delete(`${PLANS_BASE}/${id}/`)
+
+export const assignPlan = (tenantId: number, planId: number | null) =>
+  adminClient.patch<SuperadminTenant>(`${BASE}/${tenantId}/plan/`, { plan_id: planId })

@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import PublicDeliveryZoneListView, SuperadminTenantViewSet, TenantSettingsView, AdminDeliveryZoneViewSet
+from .views import PublicDeliveryZoneListView, SuperadminTenantViewSet, TenantSettingsView, AdminDeliveryZoneViewSet, PlanViewSet
 
 public_urlpatterns = [
     path(
@@ -20,4 +20,5 @@ admin_urlpatterns = [
 
 router = DefaultRouter()
 router.register('tenants', SuperadminTenantViewSet, basename='superadmin-tenants')
+router.register('plans', PlanViewSet, basename='superadmin-plans')
 superadmin_urlpatterns = router.urls

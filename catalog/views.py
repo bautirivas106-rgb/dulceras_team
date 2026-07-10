@@ -105,6 +105,21 @@ class AdminProductViewSet(TenantFilterMixin, viewsets.ModelViewSet):
     serializer_class = ProductAdminSerializer
     permission_classes = [IsAuthenticated]
 
+    def perform_create(self, serializer):
+        tenant = self.get_tenant() or get_object_or_404(
+            Tenant, slug=self.request.query_params.get('tenant', '')
+        )
+        plan = getattr(tenant, 'plan', None)
+        if plan and plan.max_products > 0:
+            current = Product.objects.filter(tenant=tenant).count()
+            if current >= plan.max_products:
+                from rest_framework import serializers as drf_serializers
+                raise drf_serializers.ValidationError(
+                    f'Tu plan "{plan.name}" permite hasta {plan.max_products} productos. '
+                    f'Actualizá tu plan para agregar más.'
+                )
+        serializer.save(tenant=tenant)
+
 
 class AdminProductVariantViewSet(TenantFilterMixin, viewsets.ModelViewSet):
     queryset = ProductVariant.objects.select_related('product').order_by('sort_order', 'name')
