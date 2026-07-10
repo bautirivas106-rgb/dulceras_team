@@ -1,13 +1,67 @@
 import { useEffect, useState, useRef } from 'react'
 import {
   getCategories, getProducts, deleteProduct, updateCategory, deleteCategory,
-  updateStock, updateMadeToOrder,
+  updateStock, updateMadeToOrder, updateProduct,
   type CatalogCategory, type CatalogProduct, type CatalogVariant,
 } from '../../../api/catalogApi'
 import CategoryModal from './CategoryModal'
 import ProductModal from './ProductModal'
 
 type Tab = 'products' | 'categories' | 'stock'
+
+function ImageUploadCell({ product, onUploaded }: { product: CatalogProduct; onUploaded: () => void }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    const fd = new FormData()
+    fd.append('image', file)
+    try {
+      await updateProduct(product.id, fd)
+      onUploaded()
+    } finally {
+      setUploading(false)
+      if (inputRef.current) inputRef.current.value = ''
+    }
+  }
+
+  const imgSrc = product.image_url || product.image
+
+  return (
+    <button
+      type="button"
+      onClick={() => inputRef.current?.click()}
+      className="relative w-10 h-10 rounded-lg overflow-hidden border border-gray-200 group/img block flex-shrink-0 hover:border-[#E8889A] transition-colors"
+      title="Cambiar imagen"
+    >
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      {uploading ? (
+        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+          <div className="w-4 h-4 border-2 border-[#E8889A] border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : imgSrc ? (
+        <>
+          <img src={imgSrc} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+        </>
+      ) : (
+        <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-300 group-hover/img:bg-pink-50 group-hover/img:text-[#E8889A] transition-colors">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </div>
+      )}
+    </button>
+  )
+}
 
 function Badge({ active }: { active: boolean }) {
   return (
@@ -173,20 +227,7 @@ export default function CatalogPage() {
                       {filteredProducts.map((prod) => (
                         <tr key={prod.id} className="hover:bg-gray-50 transition-colors group">
                           <td className="px-4 py-3">
-                            {prod.image ? (
-                              <img
-                                src={prod.image}
-                                alt=""
-                                className="w-10 h-10 rounded-lg object-cover border border-gray-100"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                              </div>
-                            )}
+                            <ImageUploadCell product={prod} onUploaded={reload} />
                           </td>
                           <td className="px-4 py-3">
                             <p className="font-medium text-gray-800">{prod.name}</p>

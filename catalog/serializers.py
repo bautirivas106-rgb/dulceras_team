@@ -61,13 +61,20 @@ class ProductAdminSerializer(serializers.ModelSerializer):
     variants = ProductVariantAdminSerializer(many=True, read_only=True)
     tenant = serializers.StringRelatedField(read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = (
             'id', 'tenant', 'category', 'category_name',
-            'name', 'description', 'image',
+            'name', 'description', 'image', 'image_url',
             'is_active', 'made_to_order', 'requires_advance_hours', 'sort_order',
             'variants', 'created_at', 'updated_at',
         )
         read_only_fields = ('tenant', 'created_at', 'updated_at')
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        return None

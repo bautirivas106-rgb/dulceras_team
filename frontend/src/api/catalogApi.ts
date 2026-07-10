@@ -24,6 +24,7 @@ export interface CatalogProduct {
   name: string
   description: string
   image: string | null
+  image_url?: string | null
   category: number
   category_name: string
   is_active: boolean
