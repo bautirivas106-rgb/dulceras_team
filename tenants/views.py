@@ -37,6 +37,21 @@ class PublicPlanSerializer(serializers.ModelSerializer):
         )
 
 
+class PublicBrandingView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, tenant_slug):
+        tenant = get_object_or_404(Tenant, slug=tenant_slug, is_active=True)
+        profile, _ = BusinessProfile.objects.get_or_create(tenant=tenant)
+        return Response({
+            'business_name': tenant.name,
+            'logo_url': profile.logo_url,
+            'primary_color': profile.primary_color,
+            'accent_color': profile.accent_color,
+            'bg_color': profile.bg_color,
+        })
+
+
 class PublicPlanListView(ListAPIView):
     serializer_class = PublicPlanSerializer
     permission_classes = [AllowAny]
@@ -455,6 +470,10 @@ class TenantSettingsSerializer(serializers.Serializer):
     advance_hours_required = serializers.IntegerField(min_value=0, required=False)
     deposit_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
     max_orders_per_day = serializers.IntegerField(min_value=0, required=False)
+    logo_url = serializers.URLField(required=False, allow_blank=True)
+    primary_color = serializers.RegexField(r'^#[0-9A-Fa-f]{6}$', required=False)
+    accent_color = serializers.RegexField(r'^#[0-9A-Fa-f]{6}$', required=False)
+    bg_color = serializers.RegexField(r'^#[0-9A-Fa-f]{6}$', required=False)
 
 
 class TenantSettingsView(APIView):
@@ -485,6 +504,10 @@ class TenantSettingsView(APIView):
             'advance_hours_required': profile.advance_hours_required,
             'deposit_percentage': str(profile.deposit_percentage),
             'max_orders_per_day': profile.max_orders_per_day,
+            'logo_url': profile.logo_url,
+            'primary_color': profile.primary_color,
+            'accent_color': profile.accent_color,
+            'bg_color': profile.bg_color,
         })
 
     def patch(self, request):
@@ -501,7 +524,8 @@ class TenantSettingsView(APIView):
 
         profile, _ = BusinessProfile.objects.get_or_create(tenant=tenant)
         profile_fields = ['address', 'phone', 'email', 'whatsapp', 'instagram',
-                          'advance_hours_required', 'deposit_percentage', 'max_orders_per_day']
+                          'advance_hours_required', 'deposit_percentage', 'max_orders_per_day',
+                          'logo_url', 'primary_color', 'accent_color', 'bg_color']
         updated = [f for f in profile_fields if f in d]
         for f in updated:
             setattr(profile, f, d[f])

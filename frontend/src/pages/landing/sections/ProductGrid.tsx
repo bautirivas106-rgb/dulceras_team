@@ -27,21 +27,17 @@ function ProductCard({ product, onClick }: { product: Product; onClick: () => vo
     <button
       onClick={outOfStock ? undefined : onClick}
       disabled={outOfStock}
-      className={`bg-white rounded-2xl overflow-hidden shadow-sm border border-[#F5E8D0] transition-all text-left group relative ${
-        outOfStock
-          ? 'opacity-60 cursor-not-allowed'
-          : 'hover:shadow-md hover:-translate-y-0.5 cursor-pointer'
+      className={`bg-white rounded-2xl overflow-hidden shadow-sm border border-cream-dark transition-all text-left group relative ${
+        outOfStock ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-md hover:-translate-y-0.5 cursor-pointer'
       }`}
     >
-      {/* Badge agotado */}
       {outOfStock && (
         <div className="absolute top-2 left-2 z-10 bg-gray-800/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
           Agotado
         </div>
       )}
 
-      {/* Imagen */}
-      <div className="bg-[#F5E8D0] h-44 flex items-center justify-center overflow-hidden">
+      <div className="bg-cream-dark h-44 flex items-center justify-center overflow-hidden">
         {product.image_url ? (
           <img
             src={product.image_url}
@@ -53,27 +49,20 @@ function ProductCard({ product, onClick }: { product: Product; onClick: () => vo
         )}
       </div>
 
-      {/* Info */}
       <div className="p-4">
-        <h3 className="font-bold text-[#3D1A0E] text-sm leading-snug mb-1">
-          {product.name}
-        </h3>
-        <p className="text-[#A0673A] text-xs line-clamp-2 leading-relaxed mb-3">
-          {product.description}
-        </p>
+        <h3 className="font-bold text-chocolate text-sm leading-snug mb-1">{product.name}</h3>
+        <p className="text-mocha-light text-xs line-clamp-2 leading-relaxed mb-3">{product.description}</p>
         <div className="flex items-center justify-between gap-1 flex-wrap">
           {minPrice !== null && (
-            <span className={`font-bold text-base ${outOfStock ? 'text-gray-400 line-through' : 'text-[#E8889A]'}`}>
+            <span className={`font-bold text-base ${outOfStock ? 'text-gray-400 line-through' : 'text-rose'}`}>
               desde ${minPrice.toLocaleString('es-AR')}
             </span>
           )}
-          <div className="flex gap-1">
-            {product.requires_advance_hours > 0 && !outOfStock && (
-              <span className="text-[10px] bg-[#F7D0D8] text-[#7C4A2D] px-2 py-0.5 rounded-full">
-                ⏰ {product.requires_advance_hours}h
-              </span>
-            )}
-          </div>
+          {product.requires_advance_hours > 0 && !outOfStock && (
+            <span className="text-[10px] bg-rose-light text-mocha px-2 py-0.5 rounded-full">
+              ⏰ {product.requires_advance_hours}h
+            </span>
+          )}
         </div>
       </div>
     </button>
@@ -82,13 +71,13 @@ function ProductCard({ product, onClick }: { product: Product; onClick: () => vo
 
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-2xl overflow-hidden border border-[#F5E8D0] animate-pulse">
-      <div className="bg-[#F5E8D0] h-44" />
+    <div className="bg-white rounded-2xl overflow-hidden border border-cream-dark animate-pulse">
+      <div className="bg-cream-dark h-44" />
       <div className="p-4 space-y-2">
-        <div className="h-4 bg-[#F5E8D0] rounded w-3/4" />
-        <div className="h-3 bg-[#F5E8D0] rounded w-full" />
-        <div className="h-3 bg-[#F5E8D0] rounded w-2/3" />
-        <div className="h-5 bg-[#F5E8D0] rounded w-1/2 mt-3" />
+        <div className="h-4 bg-cream-dark rounded w-3/4" />
+        <div className="h-3 bg-cream-dark rounded w-full" />
+        <div className="h-3 bg-cream-dark rounded w-2/3" />
+        <div className="h-5 bg-cream-dark rounded w-1/2 mt-3" />
       </div>
     </div>
   )
@@ -107,7 +96,7 @@ export default function ProductGrid({ products, loading }: Props) {
 
   if (products.length === 0) {
     return (
-      <div className="text-center py-16 text-[#A0673A]">
+      <div className="text-center py-16 text-mocha-light">
         <div className="text-5xl mb-4">🍰</div>
         <p className="text-lg font-medium">No hay productos en esta categoría todavía.</p>
       </div>
@@ -121,10 +110,7 @@ export default function ProductGrid({ products, loading }: Props) {
           <ProductCard key={p.id} product={p} onClick={() => setSelected(p)} />
         ))}
       </div>
-
-      {selected && (
-        <ProductModal product={selected} onClose={() => setSelected(null)} />
-      )}
+      {selected && <ProductModal product={selected} onClose={() => setSelected(null)} />}
     </>
   )
 }

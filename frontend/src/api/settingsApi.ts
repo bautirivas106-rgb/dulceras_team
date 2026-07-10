@@ -11,6 +11,10 @@ export interface TenantSettings {
   advance_hours_required: number
   deposit_percentage: string
   max_orders_per_day: number
+  logo_url: string
+  primary_color: string
+  accent_color: string
+  bg_color: string
 }
 
 export interface DeliveryZone {

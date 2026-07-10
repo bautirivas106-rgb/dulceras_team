@@ -180,6 +180,104 @@ export default function SettingsPage() {
 
       {/* Sección: Zonas de entrega */}
       <ZonesSection />
+
+      {/* Sección: Branding */}
+      <Section title="Identidad visual">
+        <Field label="URL del logo" hint="Imagen HTTPS accesible públicamente (PNG o SVG recomendado)">
+          <input
+            type="url"
+            value={form.logo_url ?? ''}
+            onChange={e => set('logo_url', e.target.value)}
+            className={inputCls}
+            placeholder="https://cdn.tu-negocio.com/logo.png"
+          />
+        </Field>
+        {form.logo_url && (
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+            <img src={form.logo_url} alt="Logo preview" className="h-10 w-auto object-contain" onError={e => (e.currentTarget.style.display = 'none')} />
+            <p className="text-xs text-gray-400">Vista previa del logo</p>
+          </div>
+        )}
+        <div className="grid grid-cols-3 gap-4">
+          <Field label="Color primario" hint="Fondo header, botones principales">
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={form.primary_color ?? '#3D1A0E'}
+                onChange={e => set('primary_color', e.target.value)}
+                className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5"
+              />
+              <input
+                type="text"
+                value={form.primary_color ?? '#3D1A0E'}
+                onChange={e => set('primary_color', e.target.value)}
+                className={inputCls + ' font-mono text-xs'}
+                placeholder="#3D1A0E"
+                maxLength={7}
+              />
+            </div>
+          </Field>
+          <Field label="Color acento" hint="Badges, precios, CTAs secundarios">
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={form.accent_color ?? '#E8889A'}
+                onChange={e => set('accent_color', e.target.value)}
+                className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5"
+              />
+              <input
+                type="text"
+                value={form.accent_color ?? '#E8889A'}
+                onChange={e => set('accent_color', e.target.value)}
+                className={inputCls + ' font-mono text-xs'}
+                placeholder="#E8889A"
+                maxLength={7}
+              />
+            </div>
+          </Field>
+          <Field label="Color de fondo" hint="Fondo general de la tienda">
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={form.bg_color ?? '#FDF6EC'}
+                onChange={e => set('bg_color', e.target.value)}
+                className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5"
+              />
+              <input
+                type="text"
+                value={form.bg_color ?? '#FDF6EC'}
+                onChange={e => set('bg_color', e.target.value)}
+                className={inputCls + ' font-mono text-xs'}
+                placeholder="#FDF6EC"
+                maxLength={7}
+              />
+            </div>
+          </Field>
+        </div>
+        <div
+          className="rounded-xl p-4 flex items-center gap-4 border"
+          style={{
+            backgroundColor: form.bg_color ?? '#FDF6EC',
+            borderColor: form.primary_color ?? '#3D1A0E',
+          }}
+        >
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+            style={{ backgroundColor: form.accent_color ?? '#E8889A' }}>A</div>
+          <div>
+            <p className="font-bold text-sm" style={{ color: form.primary_color ?? '#3D1A0E' }}>
+              {form.name || 'Tu negocio'}
+            </p>
+            <p className="text-xs" style={{ color: form.accent_color ?? '#E8889A' }}>Vista previa de colores</p>
+          </div>
+          <button
+            type="button"
+            className="ml-auto text-xs font-semibold px-3 py-1.5 rounded-full text-white"
+            style={{ backgroundColor: form.primary_color ?? '#3D1A0E' }}
+          >
+            Hacer pedido
+          </button>
+        </div>
+      </Section>
     </form>
   )
 }

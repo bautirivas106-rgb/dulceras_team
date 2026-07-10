@@ -57,6 +57,11 @@ class BusinessProfile(models.Model):
         default=0,
         help_text='Máximo de pedidos por día. 0 = sin límite.',
     )
+    # Branding
+    logo_url = models.URLField(blank=True)
+    primary_color = models.CharField(max_length=7, default='#3D1A0E')
+    accent_color = models.CharField(max_length=7, default='#E8889A')
+    bg_color = models.CharField(max_length=7, default='#FDF6EC')
 
     def __str__(self):
         return f"Perfil de {self.tenant}"

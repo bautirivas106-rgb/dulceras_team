@@ -208,7 +208,7 @@ class Command(BaseCommand):
         self.stdout.write(f"{'Creado' if created else 'Existente'}: Tenant '{tenant.name}' (plan: {tenant.plan})")
 
         # Business profile
-        BusinessProfile.objects.get_or_create(
+        profile, bp_created = BusinessProfile.objects.get_or_create(
             tenant=tenant,
             defaults={
                 'address': 'Almagro, Ciudad Autónoma de Buenos Aires',
@@ -218,9 +218,17 @@ class Command(BaseCommand):
                 'instagram': '@dulceras.team',
                 'advance_hours_required': 48,
                 'deposit_percentage': Decimal('50'),
+                'primary_color': '#3D1A0E',
+                'accent_color': '#E8889A',
+                'bg_color': '#FDF6EC',
             },
         )
-        self.stdout.write('  + BusinessProfile')
+        if not bp_created:
+            profile.primary_color = '#3D1A0E'
+            profile.accent_color = '#E8889A'
+            profile.bg_color = '#FDF6EC'
+            profile.save(update_fields=['primary_color', 'accent_color', 'bg_color'])
+        self.stdout.write(f"  {'+ ' if bp_created else '~ '}BusinessProfile")
 
         # Delivery zones
         for zone_data in DELIVERY_ZONES:
