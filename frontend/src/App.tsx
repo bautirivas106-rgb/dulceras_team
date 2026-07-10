@@ -11,6 +11,7 @@ import PaymentFailure from './pages/payment/PaymentFailure'
 import PaymentPending from './pages/payment/PaymentPending'
 
 import LoginPage from './pages/admin/LoginPage'
+import RegisterPage from './pages/register/RegisterPage'
 import AdminLayout from './pages/admin/layout/AdminLayout'
 import DashboardPage from './pages/admin/dashboard/DashboardPage'
 import OrdersPage from './pages/admin/orders/OrdersPage'
@@ -41,8 +42,9 @@ export default function App() {
             <Route path="/payment/failure/" element={<PaymentFailure />} />
             <Route path="/payment/pending/" element={<PaymentPending />} />
 
-            {/* Admin auth */}
+            {/* Auth */}
             <Route path="/admin/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
 
             {/* Admin protected */}
             <Route

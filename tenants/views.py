@@ -24,6 +24,99 @@ class IsPlatformOwner(IsAuthenticated):
 
 # ── Public ────────────────────────────────────────────────────────────────────
 
+class PublicPlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Plan
+        fields = (
+            'id', 'name', 'slug', 'price_monthly', 'description',
+            'max_products', 'max_users', 'max_orders_per_day',
+            'has_mp_integration', 'has_whatsapp',
+        )
+
+
+class PublicPlanListView(ListAPIView):
+    serializer_class = PublicPlanSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+    def get_queryset(self):
+        return Plan.objects.filter(is_active=True).order_by('price_monthly')
+
+
+class RegisterSerializer(serializers.Serializer):
+    # Business
+    name = serializers.CharField(max_length=200)
+    slug = serializers.SlugField(max_length=50)
+    phone = serializers.CharField(max_length=50, required=False, allow_blank=True, default='')
+    email = serializers.EmailField(required=False, allow_blank=True, default='')
+    whatsapp = serializers.CharField(max_length=50, required=False, allow_blank=True, default='')
+    # Admin user
+    admin_username = serializers.CharField(max_length=150)
+    admin_password = serializers.CharField(min_length=8)
+    admin_email = serializers.EmailField(required=False, allow_blank=True, default='')
+    # Plan (optional)
+    plan_id = serializers.IntegerField(required=False, allow_null=True)
+
+    def validate_slug(self, value):
+        if Tenant.objects.filter(slug=value).exists():
+            raise serializers.ValidationError('Ya existe un negocio con ese slug.')
+        return value
+
+    def validate_admin_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError('Ese nombre de usuario ya está en uso.')
+        return value
+
+    def validate_plan_id(self, value):
+        if value is not None and not Plan.objects.filter(pk=value, is_active=True).exists():
+            raise serializers.ValidationError('Plan no válido.')
+        return value
+
+    @transaction.atomic
+    def create(self, validated_data):
+        plan = None
+        plan_id = validated_data.get('plan_id')
+        if plan_id:
+            plan = Plan.objects.get(pk=plan_id)
+
+        tenant = Tenant.objects.create(
+            name=validated_data['name'],
+            slug=validated_data['slug'],
+            plan=plan,
+        )
+        BusinessProfile.objects.create(
+            tenant=tenant,
+            phone=validated_data.get('phone', ''),
+            email=validated_data.get('email', ''),
+            whatsapp=validated_data.get('whatsapp', ''),
+        )
+        user = User.objects.create_user(
+            username=validated_data['admin_username'],
+            password=validated_data['admin_password'],
+            email=validated_data.get('admin_email', ''),
+            tenant=tenant,
+            role=User.TENANT_ADMIN,
+        )
+        return tenant, user
+
+
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        tenant, user = serializer.save()
+        return Response(
+            {
+                'tenant_name': tenant.name,
+                'tenant_slug': tenant.slug,
+                'admin_username': user.username,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
 class DeliveryZoneSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeliveryZone
