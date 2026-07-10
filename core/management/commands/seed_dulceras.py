@@ -1,9 +1,12 @@
 from decimal import Decimal
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from tenants.models import Tenant, BusinessProfile, DeliveryZone
 from catalog.models import Category, Product, ProductVariant
+
+User = get_user_model()
 
 
 TENANT_SLUG = 'dulceras-team'
@@ -151,6 +154,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--reset', action='store_true', help='Elimina y recrea todos los datos del tenant')
+        parser.add_argument('--admin-password', default='admin1234', help='Contraseña del usuario admin (default: admin1234)')
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -237,5 +241,19 @@ class Command(BaseCommand):
                     },
                 )
                 self.stdout.write(f"      {'+' if v_created else '~'} {variant.name} — ${variant.price}")
+
+        # Admin user
+        admin_password = options['admin_password']
+        if not User.objects.filter(username='admin', tenant=tenant).exists():
+            User.objects.create_user(
+                username='admin',
+                password=admin_password,
+                email='dulcerasteam@gmail.com',
+                tenant=tenant,
+                role=User.TENANT_ADMIN,
+            )
+            self.stdout.write(f"  + Usuario admin (contraseña: {admin_password})")
+        else:
+            self.stdout.write('  ~ Usuario admin ya existe')
 
         self.stdout.write(self.style.SUCCESS('\nSeed de Dulceras Team completado.'))
