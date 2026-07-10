@@ -6,6 +6,9 @@ import ProtectedRoute from './components/ProtectedRoute'
 import LandingPage from './pages/landing/LandingPage'
 import CheckoutPage from './pages/checkout/CheckoutPage'
 import OrderConfirmation from './pages/checkout/OrderConfirmation'
+import PaymentSuccess from './pages/payment/PaymentSuccess'
+import PaymentFailure from './pages/payment/PaymentFailure'
+import PaymentPending from './pages/payment/PaymentPending'
 
 import LoginPage from './pages/admin/LoginPage'
 import AdminLayout from './pages/admin/layout/AdminLayout'
@@ -25,6 +28,9 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/pedido/:id" element={<OrderConfirmation />} />
+            <Route path="/payment/success/" element={<PaymentSuccess />} />
+            <Route path="/payment/failure/" element={<PaymentFailure />} />
+            <Route path="/payment/pending/" element={<PaymentPending />} />
 
             {/* Admin auth */}
             <Route path="/admin/login" element={<LoginPage />} />

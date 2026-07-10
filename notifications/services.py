@@ -5,10 +5,27 @@ y envío de WhatsApp vive aquí para no dispersar lógica de negocio en las vist
 Regla: nunca bloquear el flujo principal si falla una notificación.
 Siempre llamar desde un try/except en el código llamador.
 """
+import re
+from urllib.parse import quote
+
 from django.conf import settings
 from django.utils import timezone
 
 from .models import Notification, WhatsAppLog
+
+
+def _normalize_phone(phone: str) -> str:
+    """Devuelve el número en formato E.164 sin '+', apto para wa.me."""
+    digits = re.sub(r'\D', '', phone)
+    if digits.startswith('0'):
+        digits = '54' + digits[1:]
+    if len(digits) == 10:
+        digits = '549' + digits
+    return digits
+
+
+def wa_link(phone: str, message: str) -> str:
+    return f'https://wa.me/{_normalize_phone(phone)}?text={quote(message)}'
 
 
 # ── Bell in-app ───────────────────────────────────────────────────────────────
@@ -55,6 +72,7 @@ def notify_new_order(tenant, order):
         order=order,
     )
     _whatsapp_new_order(tenant, order)
+    _whatsapp_order_received_customer(tenant, order)
 
 
 def notify_payment_received(tenant, order, mp_payment_id=''):
@@ -70,6 +88,7 @@ def notify_payment_received(tenant, order, mp_payment_id=''):
         order=order,
     )
     _whatsapp_payment_received(tenant, order)
+    _whatsapp_payment_confirmed_customer(tenant, order)
 
 
 def notify_order_status(tenant, order, from_status, to_status, changed_by=None):
@@ -86,12 +105,15 @@ def notify_order_status(tenant, order, from_status, to_status, changed_by=None):
 # ── WhatsApp ──────────────────────────────────────────────────────────────────
 
 def send_whatsapp(tenant, phone, message, order=None):
-    """Envía un mensaje WhatsApp y registra el intento en WhatsAppLog."""
+    """
+    Envía un mensaje WhatsApp y registra el intento en WhatsAppLog.
+    Si WHATSAPP_PROVIDER_URL no está configurado, guarda el log con wa_link
+    para que el admin pueda enviarlo manualmente desde el dashboard.
+    """
     log = WhatsAppLog(tenant=tenant, phone=phone, message=message, order=order)
 
     provider_url = getattr(settings, 'WHATSAPP_PROVIDER_URL', '').strip()
     if not provider_url:
-        log.error = 'WHATSAPP_PROVIDER_URL no configurado.'
         log.save()
         return log
 
@@ -148,6 +170,44 @@ def _whatsapp_payment_received(tenant, order):
             f'Seña recibida para pedido #{order.pk} en {tenant.name}.\n'
             f'Cliente: {order.customer.name}.\n'
             f'Seña: ${order.deposit_amount}.'
+        ),
+        order=order,
+    )
+
+
+def _whatsapp_order_received_customer(tenant, order):
+    phone = getattr(order.customer, 'phone', '').strip()
+    if not phone:
+        return
+    date_str = order.required_date.strftime('%d/%m/%Y')
+    send_whatsapp(
+        tenant=tenant,
+        phone=phone,
+        message=(
+            f'¡Hola {order.customer.name}! 🍪\n'
+            f'Recibimos tu pedido #{order.pk} en {tenant.name}.\n'
+            f'Total: ${order.total} | Seña: ${order.deposit_amount}.\n'
+            f'Fecha solicitada: {date_str}.\n'
+            f'En breve te contactamos para confirmar. ¡Gracias!'
+        ),
+        order=order,
+    )
+
+
+def _whatsapp_payment_confirmed_customer(tenant, order):
+    phone = getattr(order.customer, 'phone', '').strip()
+    if not phone:
+        return
+    date_str = order.required_date.strftime('%d/%m/%Y')
+    send_whatsapp(
+        tenant=tenant,
+        phone=phone,
+        message=(
+            f'¡Hola {order.customer.name}! 🎉\n'
+            f'Tu seña para el pedido #{order.pk} en {tenant.name} fue confirmada.\n'
+            f'Nos pondremos en contacto para coordinar la entrega.\n'
+            f'Fecha solicitada: {date_str}.\n'
+            f'¡Gracias por elegirnos! 🐱'
         ),
         order=order,
     )

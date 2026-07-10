@@ -57,7 +57,18 @@ class InitiatePaymentView(APIView):
 
         try:
             result = sdk.preference().create(preference_data)
+            mp_status = result.get('status', 0)
             preference = result['response']
+
+            if mp_status not in (200, 201) or not preference.get('id'):
+                intent.status = PaymentIntent.CANCELLED
+                intent.mp_response = preference
+                intent.save(update_fields=['status', 'mp_response', 'updated_at'])
+                return Response(
+                    {'detail': 'Mercado Pago rechazó la preferencia.', 'mp_error': preference},
+                    status=status.HTTP_502_BAD_GATEWAY,
+                )
+
             intent.mp_preference_id = preference.get('id', '')
             intent.mp_response = preference
             intent.save(update_fields=['mp_preference_id', 'mp_response', 'updated_at'])

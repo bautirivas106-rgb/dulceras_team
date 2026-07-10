@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Notification, WhatsAppLog
+from .services import wa_link
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -16,7 +17,14 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 
 class WhatsAppLogSerializer(serializers.ModelSerializer):
+    wa_link = serializers.SerializerMethodField()
+
+    def get_wa_link(self, obj):
+        if not obj.phone:
+            return None
+        return wa_link(obj.phone, obj.message)
+
     class Meta:
         model = WhatsAppLog
-        fields = ('id', 'phone', 'message', 'order', 'sent', 'sent_at', 'error', 'created_at')
+        fields = ('id', 'phone', 'message', 'order', 'sent', 'sent_at', 'error', 'wa_link', 'created_at')
         read_only_fields = fields

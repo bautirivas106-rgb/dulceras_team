@@ -1,9 +1,13 @@
+import { useState } from 'react'
 import { useLocation, Link } from 'react-router-dom'
 import type { OrderDetail } from '../../types/orders'
+import { initiatePayment } from '../../api/payments'
 
 export default function OrderConfirmation() {
   const { state } = useLocation() as { state: { order: OrderDetail } | null }
   const order = state?.order
+  const [paying, setPaying] = useState(false)
+  const [payError, setPayError] = useState('')
 
   if (!order) {
     return (
@@ -23,6 +27,24 @@ export default function OrderConfirmation() {
     weekday: 'long', day: 'numeric', month: 'long',
   })
 
+  async function handlePay() {
+    setPaying(true)
+    setPayError('')
+    try {
+      const result = await initiatePayment(order.id)
+      const url = result.sandbox_init_point || result.init_point
+      if (url) {
+        window.location.href = url
+      } else {
+        setPayError(result.detail || 'No se pudo iniciar el pago.')
+        setPaying(false)
+      }
+    } catch {
+      setPayError('Error al conectar con Mercado Pago. Intentá de nuevo.')
+      setPaying(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#FDF6EC] px-4 py-12">
       <div className="max-w-md mx-auto">
@@ -36,7 +58,7 @@ export default function OrderConfirmation() {
             ¡Pedido recibido!
           </h1>
           <p className="text-[#7C4A2D]">
-            Te avisamos por WhatsApp para coordinar la seña.
+            Para confirmar tu lugar, pagá la seña ahora por Mercado Pago.
           </p>
         </div>
 
@@ -90,35 +112,47 @@ export default function OrderConfirmation() {
 
           {/* Seña */}
           <div className="mt-4 bg-[#F7D0D8] rounded-xl px-4 py-4 text-center">
-            <p className="text-xs font-semibold text-[#7C4A2D] mb-1">Seña pendiente de pago</p>
+            <p className="text-xs font-semibold text-[#7C4A2D] mb-1">Seña a pagar ahora</p>
             <p className="text-3xl font-bold text-[#E8889A]">
               ${Number(order.deposit_amount).toLocaleString('es-AR')}
             </p>
-            <p className="text-xs text-[#A0673A] mt-1">
-              Te contactamos por WhatsApp para coordinar el pago
-            </p>
+            <p className="text-xs text-[#A0673A] mt-1">50% del total</p>
           </div>
         </div>
 
-        {/* Próximos pasos */}
-        <div className="bg-[#F5E8D0] rounded-2xl px-5 py-4 mb-6">
-          <p className="font-semibold text-[#3D1A0E] text-sm mb-3">¿Qué pasa ahora?</p>
-          <ol className="space-y-2 text-sm text-[#7C4A2D]">
-            <li className="flex gap-2"><span className="font-bold text-[#E8889A]">1.</span> Te enviamos un mensaje al WhatsApp que diste.</li>
-            <li className="flex gap-2"><span className="font-bold text-[#E8889A]">2.</span> Confirmamos el pedido y te mandamos el link para pagar la seña.</li>
-            <li className="flex gap-2"><span className="font-bold text-[#E8889A]">3.</span> Una vez abonada, ¡tu pedido entra en producción! 🍪</li>
-          </ol>
-        </div>
+        {/* Error de pago */}
+        {payError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm">
+            {payError}
+          </div>
+        )}
 
+        {/* CTAs */}
         <div className="flex flex-col gap-3">
+          <button
+            onClick={handlePay}
+            disabled={paying}
+            className="w-full bg-[#009ee3] hover:bg-[#007ab8] disabled:opacity-60 text-white font-bold py-4 rounded-full transition-colors shadow-md text-base flex items-center justify-center gap-2"
+          >
+            {paying ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Redirigiendo a Mercado Pago...
+              </>
+            ) : (
+              <>💳 Pagar seña con Mercado Pago</>
+            )}
+          </button>
+
           <a
             href={`https://wa.me/5491100000000?text=Hola! Hice el pedido %23${order.id}`}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3.5 rounded-full text-center transition-colors"
           >
-            💬 Escribirnos por WhatsApp
+            💬 Consultar por WhatsApp
           </a>
+
           <Link
             to="/"
             className="w-full border-2 border-[#D4A76A] text-[#7C4A2D] font-semibold py-3.5 rounded-full text-center hover:bg-[#F5E8D0] transition-colors"

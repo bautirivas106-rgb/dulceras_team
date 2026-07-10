@@ -28,11 +28,10 @@ def build_mp_preference(payment_intent, tenant_slug, frontend_url, notification_
             }
         ],
         "back_urls": {
-            "success": f"{frontend_url}/payment/success/",
-            "failure": f"{frontend_url}/payment/failure/",
-            "pending": f"{frontend_url}/payment/pending/",
+            "success": f"{frontend_url}/payment/success/?order_id={order.id}",
+            "failure": f"{frontend_url}/payment/failure/?order_id={order.id}",
+            "pending": f"{frontend_url}/payment/pending/?order_id={order.id}",
         },
-        "auto_return": "approved",
         "external_reference": str(payment_intent.id),
         "notification_url": notification_url,
     }
