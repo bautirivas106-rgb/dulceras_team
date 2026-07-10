@@ -168,6 +168,31 @@ export interface ReportDaily {
   revenue: number
 }
 
+export interface ReportCustomersInsight {
+  unique: number
+  new: number
+  returning: number
+}
+
+export interface ReportDayOfWeek {
+  day: number
+  label: string
+  count: number
+  revenue: number
+}
+
+export interface ReportCouponEntry {
+  code: string
+  uses: number
+  total_discount: number
+}
+
+export interface ReportCouponStats {
+  orders_with_coupon: number
+  total_discount: number
+  top_coupons: ReportCouponEntry[]
+}
+
 export interface ReportData {
   period: string
   from_date: string | null
@@ -177,6 +202,9 @@ export interface ReportData {
   top_products: ReportTopProduct[]
   by_zone: ReportByZone[]
   daily: ReportDaily[]
+  customers_insight: ReportCustomersInsight
+  by_day_of_week: ReportDayOfWeek[]
+  coupon_stats: ReportCouponStats
 }
 
 export const STATUS_TRANSITIONS: Record<string, string[]> = {

@@ -445,6 +445,66 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
             .order_by('day')
         ]
 
+        # ── Clientes nuevos vs recurrentes ────────────────────────────────────
+        customer_ids_in_period = list(base.values_list('customer_id', flat=True).distinct())
+        unique_count = len(customer_ids_in_period)
+        if from_date and customer_ids_in_period:
+            returning_ids = set(
+                Order.objects.filter(
+                    tenant=tenant,
+                    customer_id__in=customer_ids_in_period,
+                    created_at__date__lt=from_date,
+                ).values_list('customer_id', flat=True)
+            )
+            returning_count = len(returning_ids)
+            new_count = unique_count - returning_count
+        else:
+            new_count = unique_count
+            returning_count = 0
+        customers_insight = {
+            'unique': unique_count,
+            'new': new_count,
+            'returning': returning_count,
+        }
+
+        # ── Días pico (por día de la semana) ──────────────────────────────────
+        from collections import defaultdict as _defaultdict
+        _day_data = _defaultdict(lambda: {'count': 0, 'revenue': 0.0})
+        for row in base.values('required_date', 'total'):
+            if row['required_date']:
+                dow = row['required_date'].weekday()  # 0=Lun, 6=Dom
+                _day_data[dow]['count'] += 1
+                _day_data[dow]['revenue'] += float(row['total'] or 0)
+        _day_labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+        by_day_of_week = [
+            {'day': i, 'label': _day_labels[i], **_day_data.get(i, {'count': 0, 'revenue': 0.0})}
+            for i in range(7)
+        ]
+
+        # ── Uso de cupones ────────────────────────────────────────────────────
+        _coupon_base = base.filter(coupon_code__gt='')
+        _coupon_agg = _coupon_base.aggregate(
+            count=Count('id'),
+            total_discount=Sum('discount_amount'),
+        )
+        _top_coupons = list(
+            _coupon_base.values('coupon_code')
+            .annotate(uses=Count('id'), discount_total=Sum('discount_amount'))
+            .order_by('-uses')[:5]
+        )
+        coupon_stats = {
+            'orders_with_coupon': _coupon_agg['count'] or 0,
+            'total_discount': float(_coupon_agg['total_discount'] or 0),
+            'top_coupons': [
+                {
+                    'code': c['coupon_code'],
+                    'uses': c['uses'],
+                    'total_discount': float(c['discount_total'] or 0),
+                }
+                for c in _top_coupons
+            ],
+        }
+
         return Response({
             'period': period,
             'from_date': str(from_date) if from_date else None,
@@ -459,6 +519,9 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
             'top_products': top_products,
             'by_zone': by_zone,
             'daily': daily,
+            'customers_insight': customers_insight,
+            'by_day_of_week': by_day_of_week,
+            'coupon_stats': coupon_stats,
         })
 
 
