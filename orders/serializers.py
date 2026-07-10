@@ -130,6 +130,24 @@ class OrderCreateSerializer(serializers.Serializer):
                 )
             })
 
+        # Validar límite diario de pedidos
+        try:
+            max_per_day = tenant.profile.max_orders_per_day
+        except Exception:
+            max_per_day = 0
+        if max_per_day > 0:
+            orders_that_day = Order.objects.filter(
+                tenant=tenant,
+                required_date=required_date,
+            ).exclude(status__in=['cancelled', 'refunded']).count()
+            if orders_that_day >= max_per_day:
+                raise serializers.ValidationError({
+                    'required_date': (
+                        f'Ya se alcanzó el límite de {max_per_day} pedido(s) para el '
+                        f'{required_date.strftime("%d/%m/%Y")}. Elegí otra fecha.'
+                    )
+                })
+
         # Validar entrega
         if attrs['delivery_method'] == Order.DELIVERY:
             if not attrs.get('delivery_zone_id'):
