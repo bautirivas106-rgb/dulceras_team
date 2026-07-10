@@ -1,8 +1,15 @@
+from django.conf import settings
 from django.db import models
 from core.models import TenantModel
 
 
 class Customer(TenantModel):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='customer_profile',
+    )
     name = models.CharField(max_length=200)
     phone = models.CharField(max_length=50, blank=True)
     email = models.EmailField(blank=True)

@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
+import { CustomerAuthProvider } from './context/CustomerAuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 
 import LandingPage from './pages/landing/LandingPage'
@@ -23,6 +24,9 @@ import ReportsPage from './pages/admin/reports/ReportsPage'
 import SettingsPage from './pages/admin/settings/SettingsPage'
 import BillingPage from './pages/admin/billing/BillingPage'
 import CouponsPage from './pages/admin/coupons/CouponsPage'
+import CustomerLoginPage from './pages/cuenta/LoginPage'
+import CustomerRegisterPage from './pages/cuenta/RegisterPage'
+import CustomerOrdersPage from './pages/cuenta/OrdersPage'
 
 import SuperadminLayout from './pages/superadmin/SuperadminLayout'
 import MetricsPage from './pages/superadmin/MetricsPage'
@@ -33,6 +37,7 @@ import PlansPage from './pages/superadmin/PlansPage'
 export default function App() {
   return (
     <AuthProvider>
+      <CustomerAuthProvider>
       <CartProvider>
         <BrowserRouter>
           <Routes>
@@ -47,6 +52,11 @@ export default function App() {
             {/* Auth */}
             <Route path="/admin/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+
+            {/* Cuenta cliente */}
+            <Route path="/cuenta/login" element={<CustomerLoginPage />} />
+            <Route path="/cuenta/registro" element={<CustomerRegisterPage />} />
+            <Route path="/cuenta/pedidos" element={<CustomerOrdersPage />} />
 
             {/* Admin protected */}
             <Route
@@ -88,6 +98,7 @@ export default function App() {
           </Routes>
         </BrowserRouter>
       </CartProvider>
+      </CustomerAuthProvider>
     </AuthProvider>
   )
 }

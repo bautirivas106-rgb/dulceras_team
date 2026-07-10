@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useCart } from '../../context/CartContext'
 import { getDeliveryZones, createOrder, getDateAvailability } from '../../api/orders'
 import { validateCoupon } from '../../api/couponsApi'
+import { useCustomerAuth } from '../../context/CustomerAuthContext'
 import type { DeliveryZone } from '../../types/orders'
 
 const TENANT = 'dulceras-team'
@@ -17,13 +18,14 @@ function minDate(advanceHours: number): string {
 export default function CheckoutPage() {
   const navigate = useNavigate()
   const { items, total, maxAdvanceHours, clear } = useCart()
+  const { customer } = useCustomerAuth()
 
   const [zones, setZones] = useState<DeliveryZone[]>([])
   const [unavailableDates, setUnavailableDates] = useState<string[]>([])
   const [form, setForm] = useState({
-    customer_name: '',
-    customer_phone: '',
-    customer_email: '',
+    customer_name: customer?.name ?? '',
+    customer_phone: customer?.phone ?? '',
+    customer_email: customer?.email ?? '',
     delivery_method: 'pickup' as 'pickup' | 'delivery',
     delivery_zone_id: '',
     required_date: '',

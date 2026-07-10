@@ -2,6 +2,26 @@ from rest_framework import serializers
 from .models import Customer, CustomerAddress
 
 
+class CustomerPublicRegisterSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=200)
+    phone = serializers.CharField(max_length=50)
+    email = serializers.EmailField()
+    password = serializers.CharField(min_length=8, write_only=True)
+
+
+class CustomerPublicProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Customer
+        fields = ('id', 'name', 'phone', 'email', 'created_at')
+        read_only_fields = ('id', 'created_at')
+
+
+class CustomerPublicProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Customer
+        fields = ('name', 'phone')
+
+
 class CustomerAddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerAddress

@@ -8,6 +8,7 @@ class User(AbstractUser):
     STAFF_VENTAS = 'staff_ventas'
     STAFF_PRODUCCION = 'staff_produccion'
     STAFF_CAJA = 'staff_caja'
+    CUSTOMER = 'customer'
 
     ROLE_CHOICES = [
         (PLATFORM_OWNER, 'Platform Owner'),
@@ -15,6 +16,7 @@ class User(AbstractUser):
         (STAFF_VENTAS, 'Staff Ventas'),
         (STAFF_PRODUCCION, 'Staff Producción'),
         (STAFF_CAJA, 'Staff Caja'),
+        (CUSTOMER, 'Cliente'),
     ]
 
     tenant = models.ForeignKey(

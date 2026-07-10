@@ -7,11 +7,11 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from tenants.urls import public_urlpatterns as tenants_public, admin_urlpatterns as tenants_admin, superadmin_urlpatterns, register_urlpatterns
 from catalog.urls import public_urlpatterns as catalog_public, admin_urlpatterns as catalog_admin
 from orders.urls import public_urlpatterns as orders_public, admin_urlpatterns as orders_admin, coupon_urlpatterns as coupons_admin
-from customers.urls import admin_urlpatterns as customers_admin
+from customers.urls import admin_urlpatterns as customers_admin, public_urlpatterns as customers_public
 from payments.urls import public_urlpatterns as payments_public, admin_urlpatterns as payments_admin
 from notifications.urls import admin_urlpatterns as notifications_admin
 
-public_patterns = [*tenants_public, *catalog_public, *orders_public, *payments_public]
+public_patterns = [*tenants_public, *catalog_public, *orders_public, *payments_public, *customers_public]
 
 urlpatterns = [
     # Django admin

@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useCart } from '../../../context/CartContext'
 import { useBranding } from '../../../context/BrandingContext'
+import { useCustomerAuth } from '../../../context/CustomerAuthContext'
 import CartDrawer from '../../../components/CartDrawer'
 
 export default function Header() {
@@ -8,6 +10,7 @@ export default function Header() {
   const [cartOpen, setCartOpen] = useState(false)
   const { itemCount } = useCart()
   const { business_name, logo_url } = useBranding()
+  const { customer, isLoggedIn } = useCustomerAuth()
 
   return (
     <>
@@ -31,6 +34,28 @@ export default function Header() {
 
           {/* Acciones derecha */}
           <div className="flex items-center gap-3">
+            {isLoggedIn ? (
+              <Link
+                to="/cuenta/pedidos"
+                className="hidden md:flex items-center gap-1.5 text-sm text-mocha hover:text-chocolate transition-colors font-medium"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                {customer?.name.split(' ')[0]}
+              </Link>
+            ) : (
+              <Link
+                to="/cuenta/login"
+                className="hidden md:flex items-center gap-1.5 text-sm text-mocha hover:text-chocolate transition-colors font-medium"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Mi cuenta
+              </Link>
+            )}
+            {/* carrito */}
             <button
               onClick={() => setCartOpen(true)}
               className="relative p-2 text-mocha hover:text-chocolate transition-colors"
@@ -74,6 +99,9 @@ export default function Header() {
             <a href="#catalogo" onClick={() => setMenuOpen(false)}>Catálogo</a>
             <a href="#como-pedir" onClick={() => setMenuOpen(false)}>Cómo pedir</a>
             <a href="#nosotros" onClick={() => setMenuOpen(false)}>Nuestra historia</a>
+            <Link to={isLoggedIn ? '/cuenta/pedidos' : '/cuenta/login'} onClick={() => setMenuOpen(false)}>
+              {isLoggedIn ? `Mi cuenta (${customer?.name.split(' ')[0]})` : 'Mi cuenta'}
+            </Link>
             <a
               href="#catalogo"
               onClick={() => setMenuOpen(false)}
