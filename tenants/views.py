@@ -241,3 +241,71 @@ class SuperadminTenantViewSet(viewsets.ViewSet):
             'total_users': total_users,
             'by_tenant': by_tenant,
         })
+
+
+# ── Admin settings (tenant propio) ───────────────────────────────────────────
+
+class TenantSettingsSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=200, required=False)
+    address = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    phone = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    whatsapp = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    instagram = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    advance_hours_required = serializers.IntegerField(min_value=0, required=False)
+    deposit_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
+    max_orders_per_day = serializers.IntegerField(min_value=0, required=False)
+
+
+class TenantSettingsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def _get_tenant(self):
+        user = self.request.user
+        if user.is_platform_owner:
+            slug = self.request.query_params.get('tenant')
+            if slug:
+                return get_object_or_404(Tenant, slug=slug)
+            return user.tenant
+        return user.tenant
+
+    def get(self, request):
+        tenant = self._get_tenant()
+        if not tenant:
+            return Response({'error': 'tenant requerido.'}, status=400)
+        profile, _ = BusinessProfile.objects.get_or_create(tenant=tenant)
+        return Response({
+            'name': tenant.name,
+            'slug': tenant.slug,
+            'address': profile.address,
+            'phone': profile.phone,
+            'email': profile.email,
+            'whatsapp': profile.whatsapp,
+            'instagram': profile.instagram,
+            'advance_hours_required': profile.advance_hours_required,
+            'deposit_percentage': str(profile.deposit_percentage),
+            'max_orders_per_day': profile.max_orders_per_day,
+        })
+
+    def patch(self, request):
+        tenant = self._get_tenant()
+        if not tenant:
+            return Response({'error': 'tenant requerido.'}, status=400)
+        serializer = TenantSettingsSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        d = serializer.validated_data
+
+        if 'name' in d:
+            tenant.name = d['name']
+            tenant.save(update_fields=['name'])
+
+        profile, _ = BusinessProfile.objects.get_or_create(tenant=tenant)
+        profile_fields = ['address', 'phone', 'email', 'whatsapp', 'instagram',
+                          'advance_hours_required', 'deposit_percentage', 'max_orders_per_day']
+        updated = [f for f in profile_fields if f in d]
+        for f in updated:
+            setattr(profile, f, d[f])
+        if updated:
+            profile.save(update_fields=updated)
+
+        return self.get(request)

@@ -19,6 +19,7 @@ import CustomersPage from './pages/admin/customers/CustomersPage'
 import CatalogPage from './pages/admin/catalog/CatalogPage'
 import CalendarPage from './pages/admin/calendar/CalendarPage'
 import ReportsPage from './pages/admin/reports/ReportsPage'
+import SettingsPage from './pages/admin/settings/SettingsPage'
 
 import SuperadminLayout from './pages/superadmin/SuperadminLayout'
 import MetricsPage from './pages/superadmin/MetricsPage'
@@ -59,6 +60,7 @@ export default function App() {
               <Route path="catalog" element={<CatalogPage />} />
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="reports" element={<ReportsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
             </Route>
 
             {/* Superadmin protected */}
