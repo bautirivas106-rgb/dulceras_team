@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     PublicDeliveryZoneListView, PublicPlanListView, RegisterView,
     SuperadminTenantViewSet, TenantSettingsView, AdminDeliveryZoneViewSet, PlanViewSet,
+    BillingView,
 )
 
 public_urlpatterns = [
@@ -23,6 +24,7 @@ admin_router.register('delivery-zones', AdminDeliveryZoneViewSet, basename='admi
 
 admin_urlpatterns = [
     path('settings/', TenantSettingsView.as_view(), name='tenant-settings'),
+    path('billing/', BillingView.as_view(), name='tenant-billing'),
     path('', include(admin_router.urls)),
 ]
 

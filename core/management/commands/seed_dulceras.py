@@ -3,7 +3,9 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from tenants.models import Plan, Tenant, BusinessProfile, DeliveryZone
+from django.utils import timezone
+from datetime import timedelta
+from tenants.models import Plan, Subscription, Tenant, BusinessProfile, DeliveryZone
 from catalog.models import Category, Product, ProductVariant
 
 User = get_user_model()
@@ -291,5 +293,21 @@ class Command(BaseCommand):
             self.stdout.write(f"  + Usuario admin (contraseña: {admin_password})")
         else:
             self.stdout.write('  ~ Usuario admin ya existe')
+
+        # Subscription
+        sub, sub_created = Subscription.objects.get_or_create(
+            tenant=tenant,
+            defaults={
+                'plan': pro_plan,
+                'status': Subscription.ACTIVE,
+                'current_period_end': timezone.now() + timedelta(days=365),
+            },
+        )
+        if not sub_created and sub.status == Subscription.TRIAL:
+            sub.status = Subscription.ACTIVE
+            sub.plan = pro_plan
+            sub.current_period_end = timezone.now() + timedelta(days=365)
+            sub.save(update_fields=['status', 'plan', 'current_period_end', 'updated_at'])
+        self.stdout.write(f"  {'+ ' if sub_created else '~ '}Subscription: {sub.status}")
 
         self.stdout.write(self.style.SUCCESS('\nSeed de Dulceras Team completado.'))

@@ -62,6 +62,29 @@ class BusinessProfile(models.Model):
         return f"Perfil de {self.tenant}"
 
 
+class Subscription(TimeStampedModel):
+    TRIAL = 'trial'
+    ACTIVE = 'active'
+    OVERDUE = 'overdue'
+    CANCELLED = 'cancelled'
+    STATUS_CHOICES = [
+        (TRIAL, 'Trial'),
+        (ACTIVE, 'Activo'),
+        (OVERDUE, 'Vencido'),
+        (CANCELLED, 'Cancelado'),
+    ]
+
+    tenant = models.OneToOneField(Tenant, on_delete=models.CASCADE, related_name='subscription')
+    plan = models.ForeignKey(Plan, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=TRIAL)
+    trial_ends_at = models.DateTimeField(null=True, blank=True)
+    current_period_end = models.DateTimeField(null=True, blank=True)
+    last_payment_mp_id = models.CharField(max_length=100, blank=True)
+
+    def __str__(self):
+        return f"{self.tenant} — {self.status}"
+
+
 class DeliveryZone(TenantModel):
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=300, blank=True)

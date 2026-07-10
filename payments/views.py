@@ -150,7 +150,23 @@ class MercadoPagoWebhookView(APIView):
                 mp_status = payment_data.get('status')
                 external_ref = payment_data.get('external_reference')
 
-                if external_ref:
+                if external_ref and str(external_ref).startswith('sub_'):
+                    # Subscription payment
+                    try:
+                        from tenants.models import Subscription
+                        from django.utils import timezone
+                        from datetime import timedelta
+                        sub_id = int(str(external_ref)[4:])
+                        sub = Subscription.objects.get(pk=sub_id, tenant=tenant)
+                        if mp_status == 'approved':
+                            sub.status = Subscription.ACTIVE
+                            sub.last_payment_mp_id = mp_id
+                            sub.current_period_end = timezone.now() + timedelta(days=30)
+                            sub.save(update_fields=['status', 'last_payment_mp_id', 'current_period_end', 'updated_at'])
+                    except (Subscription.DoesNotExist, ValueError):
+                        pass
+
+                elif external_ref:
                     try:
                         intent = PaymentIntent.objects.get(
                             pk=int(external_ref), tenant=tenant

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Count, Sum
@@ -10,7 +11,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 
-from .models import BusinessProfile, Plan, Tenant, DeliveryZone
+from django.utils import timezone
+from datetime import timedelta
+from .models import BusinessProfile, Plan, Subscription, Tenant, DeliveryZone
 
 User = get_user_model()
 
@@ -107,6 +110,13 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         tenant, user = serializer.save()
+        plan = tenant.plan
+        Subscription.objects.create(
+            tenant=tenant,
+            plan=plan,
+            status=Subscription.TRIAL,
+            trial_ends_at=timezone.now() + timedelta(days=14),
+        )
         return Response(
             {
                 'tenant_name': tenant.name,
@@ -322,11 +332,16 @@ class SuperadminTenantViewSet(viewsets.ViewSet):
     def assign_plan(self, request, pk=None):
         tenant = get_object_or_404(Tenant, pk=pk)
         plan_id = request.data.get('plan_id')
-        if plan_id is None:
-            tenant.plan = None
-        else:
-            tenant.plan = get_object_or_404(Plan, pk=plan_id)
+        plan = None if plan_id is None else get_object_or_404(Plan, pk=plan_id)
+        tenant.plan = plan
         tenant.save(update_fields=['plan'])
+        sub, _ = Subscription.objects.get_or_create(
+            tenant=tenant,
+            defaults={'plan': plan, 'status': Subscription.TRIAL, 'trial_ends_at': timezone.now() + timedelta(days=14)},
+        )
+        if sub.plan != plan:
+            sub.plan = plan
+            sub.save(update_fields=['plan', 'updated_at'])
         annotated = self._annotate_tenants(Tenant.objects.filter(pk=tenant.pk)).first()
         return Response(TenantListSerializer(annotated).data)
 
@@ -494,3 +509,94 @@ class TenantSettingsView(APIView):
             profile.save(update_fields=updated)
 
         return self.get(request)
+
+
+# ── Admin billing ─────────────────────────────────────────────────────────────
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    plan_name = serializers.CharField(source='plan.name', read_only=True, default=None)
+    plan_price = serializers.DecimalField(source='plan.price_monthly', max_digits=10, decimal_places=2, read_only=True, default=None)
+    days_remaining = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Subscription
+        fields = (
+            'id', 'status', 'plan_name', 'plan_price',
+            'trial_ends_at', 'current_period_end', 'days_remaining',
+        )
+
+    def get_days_remaining(self, obj):
+        now = timezone.now()
+        if obj.status == Subscription.TRIAL and obj.trial_ends_at:
+            delta = obj.trial_ends_at - now
+            return max(0, delta.days)
+        if obj.status == Subscription.ACTIVE and obj.current_period_end:
+            delta = obj.current_period_end - now
+            return max(0, delta.days)
+        return None
+
+
+class BillingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def _get_tenant(self):
+        return self.request.user.tenant
+
+    def get(self, request):
+        tenant = self._get_tenant()
+        if not tenant:
+            return Response({'error': 'tenant requerido.'}, status=400)
+        sub, _ = Subscription.objects.get_or_create(
+            tenant=tenant,
+            defaults={
+                'plan': tenant.plan,
+                'status': Subscription.TRIAL,
+                'trial_ends_at': timezone.now() + timedelta(days=14),
+            },
+        )
+        return Response(SubscriptionSerializer(sub).data)
+
+    def post(self, request):
+        tenant = self._get_tenant()
+        if not tenant:
+            return Response({'error': 'tenant requerido.'}, status=400)
+        sub, _ = Subscription.objects.get_or_create(
+            tenant=tenant,
+            defaults={'plan': tenant.plan, 'status': Subscription.TRIAL, 'trial_ends_at': timezone.now() + timedelta(days=14)},
+        )
+        plan = sub.plan or tenant.plan
+        if not plan or float(plan.price_monthly) == 0:
+            return Response({'detail': 'Este plan no tiene costo mensual.'}, status=400)
+
+        from payments.services import get_mp_sdk
+        sdk = get_mp_sdk(tenant)
+        if not sdk:
+            return Response({'detail': 'Mercado Pago no configurado.', 'init_point': None})
+
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+        notification_url = request.build_absolute_uri(
+            f'/api/public/{tenant.slug}/webhooks/mp/'
+        )
+        preference_data = {
+            'items': [{
+                'title': f'Suscripción {plan.name} — {tenant.name}',
+                'quantity': 1,
+                'unit_price': float(plan.price_monthly),
+                'currency_id': 'ARS',
+            }],
+            'back_urls': {
+                'success': f'{frontend_url}/admin/billing?paid=1',
+                'failure': f'{frontend_url}/admin/billing?failed=1',
+                'pending': f'{frontend_url}/admin/billing?pending=1',
+            },
+            'auto_return': 'approved',
+            'external_reference': f'sub_{sub.id}',
+            'notification_url': notification_url,
+        }
+        result = sdk.preference().create(preference_data)
+        preference = result.get('response', {})
+        return Response({
+            'init_point': preference.get('init_point'),
+            'sandbox_init_point': preference.get('sandbox_init_point'),
+            'amount': str(plan.price_monthly),
+        })
