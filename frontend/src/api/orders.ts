@@ -25,3 +25,16 @@ export async function getOrder(tenantSlug: string, id: number): Promise<OrderDet
   )
   return data
 }
+
+export interface DateAvailability {
+  min_date: string
+  max_per_day: number
+  unavailable: string[]
+}
+
+export async function getDateAvailability(tenantSlug: string): Promise<DateAvailability> {
+  const { data } = await client.get<DateAvailability>(
+    `/api/public/${tenantSlug}/calendar/availability/`
+  )
+  return data
+}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useCart } from '../../context/CartContext'
-import { getDeliveryZones, createOrder } from '../../api/orders'
+import { getDeliveryZones, createOrder, getDateAvailability } from '../../api/orders'
 import type { DeliveryZone } from '../../types/orders'
 
 const TENANT = 'dulceras-team'
@@ -18,6 +18,7 @@ export default function CheckoutPage() {
   const { items, total, maxAdvanceHours, clear } = useCart()
 
   const [zones, setZones] = useState<DeliveryZone[]>([])
+  const [unavailableDates, setUnavailableDates] = useState<string[]>([])
   const [form, setForm] = useState({
     customer_name: '',
     customer_phone: '',
@@ -34,6 +35,9 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     getDeliveryZones(TENANT).then(setZones).catch(() => {})
+    getDateAvailability(TENANT)
+      .then(({ unavailable }) => setUnavailableDates(unavailable))
+      .catch(() => {})
   }, [])
 
   if (items.length === 0) {
@@ -73,6 +77,8 @@ export default function CheckoutPage() {
     if (!form.customer_name.trim()) newErrors.customer_name = 'Ingresá tu nombre.'
     if (!form.customer_phone.trim()) newErrors.customer_phone = 'Ingresá tu teléfono.'
     if (!form.required_date) newErrors.required_date = 'Elegí una fecha para tu pedido.'
+    else if (unavailableDates.includes(form.required_date))
+      newErrors.required_date = 'Lo sentimos, esa fecha ya está completa. Por favor elegí otra.'
     if (form.delivery_method === 'delivery') {
       if (!form.delivery_zone_id) newErrors.delivery_zone_id = 'Elegí una zona de entrega.'
       if (!form.address_street.trim()) newErrors.address_street = 'Ingresá tu dirección.'
@@ -261,10 +267,18 @@ export default function CheckoutPage() {
                 type="date"
                 min={minDate(maxAdvanceHours)}
                 value={form.required_date}
-                onChange={(e) => set('required_date', e.target.value)}
+                onChange={(e) => {
+                  set('required_date', e.target.value)
+                  if (unavailableDates.includes(e.target.value)) {
+                    setErrors(err => ({ ...err, required_date: 'Lo sentimos, esa fecha ya está completa. Por favor elegí otra.' }))
+                  }
+                }}
                 className={inputCls('required_date')}
               />
               {errors.required_date && <p className="text-red-500 text-xs mt-1">{errors.required_date}</p>}
+              {form.required_date && !errors.required_date && unavailableDates.includes(form.required_date) === false && (
+                <p className="text-green-600 text-xs mt-1">✓ Fecha disponible</p>
+              )}
             </section>
 
             {/* Notas */}

@@ -17,6 +17,7 @@ import OrdersPage from './pages/admin/orders/OrdersPage'
 import OrderDetailPage from './pages/admin/orders/OrderDetailPage'
 import CustomersPage from './pages/admin/customers/CustomersPage'
 import CatalogPage from './pages/admin/catalog/CatalogPage'
+import CalendarPage from './pages/admin/calendar/CalendarPage'
 
 export default function App() {
   return (
@@ -50,6 +51,7 @@ export default function App() {
               <Route path="orders/:id" element={<OrderDetailPage />} />
               <Route path="customers" element={<CustomersPage />} />
               <Route path="catalog" element={<CatalogPage />} />
+              <Route path="calendar" element={<CalendarPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

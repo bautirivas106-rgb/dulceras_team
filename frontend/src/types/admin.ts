@@ -100,6 +100,42 @@ export const STATUS_COLORS: Record<string, string> = {
   refunded: 'bg-pink-100 text-pink-700',
 }
 
+export interface CalendarOrderItem {
+  id: number
+  customer: string
+  status: string
+  status_display: string
+  total: string
+}
+
+export interface CalendarDay {
+  count: number
+  orders: CalendarOrderItem[]
+}
+
+export interface CalendarData {
+  month: string
+  max_per_day: number
+  days: Record<string, CalendarDay>
+}
+
+export interface ProductionVariant {
+  name: string
+  quantity: number
+}
+
+export interface ProductionSummaryItem {
+  product: string
+  total_units: number
+  variants: ProductionVariant[]
+}
+
+export interface ProductionDay {
+  date: string
+  orders: AdminOrderDetail[]
+  production_summary: ProductionSummaryItem[]
+}
+
 export const STATUS_TRANSITIONS: Record<string, string[]> = {
   draft: ['pending_deposit', 'cancelled'],
   pending_deposit: ['deposit_paid', 'confirmed', 'cancelled'],

@@ -3,9 +3,11 @@ import type {
   AdminOrderDetail,
   AdminOrderListItem,
   AdminNotification,
+  CalendarData,
   OrderFilters,
   OrderStats,
   PaginatedResponse,
+  ProductionDay,
 } from '../types/admin'
 
 // ── Orders ─────────────────────────────────────────────────────────────────
@@ -28,6 +30,14 @@ export const getOrder = (id: number) =>
 
 export const updateOrderStatus = (id: number, status: string, notes = '') =>
   adminClient.patch<AdminOrderDetail>(`/api/admin/orders/${id}/status/`, { status, notes })
+
+// ── Calendar ───────────────────────────────────────────────────────────────
+
+export const getCalendar = (month: string) =>
+  adminClient.get<CalendarData>(`/api/admin/orders/calendar/`, { params: { month } })
+
+export const getProductionDay = (date: string) =>
+  adminClient.get<ProductionDay>(`/api/admin/orders/production/`, { params: { date } })
 
 // ── Notifications ──────────────────────────────────────────────────────────
 

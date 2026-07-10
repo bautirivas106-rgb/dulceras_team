@@ -1,4 +1,7 @@
-from django.db.models import Sum
+from collections import defaultdict
+from datetime import timedelta
+
+from django.db.models import Count, Sum
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -14,8 +17,58 @@ from .serializers import (
     OrderStatusUpdateSerializer,
 )
 
+ACTIVE_STATUSES = [
+    Order.PENDING_DEPOSIT, Order.DEPOSIT_PAID, Order.CONFIRMED,
+    Order.IN_PRODUCTION, Order.READY, Order.OUT_FOR_DELIVERY, Order.DELIVERED,
+]
+
 
 # ── Público ───────────────────────────────────────────────────────────────────
+
+class PublicDateAvailabilityView(APIView):
+    """
+    Devuelve fechas no disponibles para los próximos 90 días.
+    Usado por el checkout para deshabilitar días llenos.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, tenant_slug):
+        tenant = get_object_or_404(Tenant, slug=tenant_slug, is_active=True)
+        max_per_day = 0
+        advance_hours = 48
+        try:
+            profile = tenant.profile
+            max_per_day = profile.max_orders_per_day
+            advance_hours = profile.advance_hours_required
+        except Exception:
+            pass
+
+        today = timezone.localdate()
+        min_date = today + timedelta(hours=advance_hours / 24)
+        end_date = today + timedelta(days=90)
+
+        unavailable = []
+        if max_per_day:
+            counts = (
+                Order.objects
+                .filter(
+                    tenant=tenant,
+                    required_date__gte=today,
+                    required_date__lte=end_date,
+                    status__in=ACTIVE_STATUSES,
+                )
+                .values('required_date')
+                .annotate(count=Count('id'))
+                .filter(count__gte=max_per_day)
+            )
+            unavailable = [str(row['required_date']) for row in counts]
+
+        return Response({
+            'min_date': str(min_date),
+            'max_per_day': max_per_day,
+            'unavailable': unavailable,
+        })
+
 
 class PublicOrderCreateView(APIView):
     permission_classes = [AllowAny]
@@ -131,3 +184,106 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
             pass
 
         return Response(OrderDetailSerializer(order).data)
+
+    def _get_tenant(self):
+        user = self.request.user
+        if user.is_platform_owner:
+            slug = self.request.query_params.get('tenant')
+            return get_object_or_404(Tenant, slug=slug, is_active=True) if slug else None
+        return user.tenant
+
+    @action(detail=False, methods=['get'], url_path='calendar')
+    def calendar(self, request):
+        """Pedidos agrupados por día para un mes (para la vista calendario del admin)."""
+        month_str = request.query_params.get('month', timezone.localdate().strftime('%Y-%m'))
+        try:
+            year, month = map(int, month_str.split('-'))
+        except (ValueError, AttributeError):
+            return Response({'error': 'Formato inválido. Usar YYYY-MM.'}, status=400)
+
+        tenant = self._get_tenant()
+        if not tenant:
+            return Response({'error': 'tenant requerido.'}, status=400)
+
+        max_per_day = 0
+        try:
+            max_per_day = tenant.profile.max_orders_per_day
+        except Exception:
+            pass
+
+        orders = (
+            Order.objects
+            .filter(
+                tenant=tenant,
+                required_date__year=year,
+                required_date__month=month,
+                status__in=ACTIVE_STATUSES,
+            )
+            .select_related('customer')
+            .order_by('required_date', 'created_at')
+        )
+
+        by_date = defaultdict(list)
+        for order in orders:
+            by_date[str(order.required_date)].append({
+                'id': order.id,
+                'customer': order.customer.name,
+                'status': order.status,
+                'status_display': order.get_status_display(),
+                'total': str(order.total),
+            })
+
+        return Response({
+            'month': month_str,
+            'max_per_day': max_per_day,
+            'days': {
+                date: {'count': len(items), 'orders': items}
+                for date, items in by_date.items()
+            },
+        })
+
+    @action(detail=False, methods=['get'], url_path='production')
+    def production(self, request):
+        """Lista de producción detallada para una fecha: pedidos + resumen de items."""
+        date_str = request.query_params.get('date')
+        if not date_str:
+            return Response({'error': 'Parámetro date requerido (YYYY-MM-DD).'}, status=400)
+
+        tenant = self._get_tenant()
+        if not tenant:
+            return Response({'error': 'tenant requerido.'}, status=400)
+
+        orders = (
+            Order.objects
+            .filter(
+                tenant=tenant,
+                required_date=date_str,
+                status__in=ACTIVE_STATUSES,
+            )
+            .select_related('customer', 'delivery_zone')
+            .prefetch_related('items')
+            .order_by('created_at')
+        )
+
+        product_totals = defaultdict(lambda: defaultdict(int))
+        for order in orders:
+            for item in order.items.all():
+                product_totals[item.product_name][item.variant_name] += item.quantity
+
+        summary = sorted([
+            {
+                'product': product,
+                'variants': [
+                    {'name': v, 'quantity': q}
+                    for v, q in sorted(variants.items())
+                ],
+                'total_units': sum(variants.values()),
+            }
+            for product, variants in product_totals.items()
+        ], key=lambda x: x['product'])
+
+        return Response({
+            'date': date_str,
+            'orders': OrderDetailSerializer(orders, many=True).data,
+            'production_summary': summary,
+        })

@@ -20,6 +20,10 @@ class BusinessProfile(models.Model):
     instagram = models.CharField(max_length=100, blank=True)
     advance_hours_required = models.PositiveIntegerField(default=48)
     deposit_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=50)
+    max_orders_per_day = models.PositiveIntegerField(
+        default=0,
+        help_text='Máximo de pedidos por día. 0 = sin límite.',
+    )
 
     def __str__(self):
         return f"Perfil de {self.tenant}"
