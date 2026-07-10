@@ -16,6 +16,7 @@ export interface OrderCreatePayload {
   address_street?: string
   address_neighborhood?: string
   notes?: string
+  coupon_code?: string
 }
 
 export interface OrderItem {
@@ -39,6 +40,8 @@ export interface OrderDetail {
   required_date: string
   subtotal: string
   delivery_cost: string
+  coupon_code: string
+  discount_amount: string
   total: string
   deposit_percentage: string
   deposit_amount: string

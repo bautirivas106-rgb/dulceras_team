@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useCart } from '../../context/CartContext'
 import { getDeliveryZones, createOrder, getDateAvailability } from '../../api/orders'
+import { validateCoupon } from '../../api/couponsApi'
 import type { DeliveryZone } from '../../types/orders'
 
 const TENANT = 'dulceras-team'
@@ -32,6 +33,10 @@ export default function CheckoutPage() {
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
+  const [couponInput, setCouponInput] = useState('')
+  const [couponApplied, setCouponApplied] = useState<{ code: string; discount: number } | null>(null)
+  const [couponError, setCouponError] = useState('')
+  const [couponLoading, setCouponLoading] = useState(false)
 
   useEffect(() => {
     getDeliveryZones(TENANT).then(setZones).catch(() => {})
@@ -62,8 +67,36 @@ export default function CheckoutPage() {
   const deliveryCost = form.delivery_method === 'delivery' && selectedZone
     ? Number(selectedZone.price)
     : 0
-  const orderTotal = total + deliveryCost
+  const discount = couponApplied?.discount ?? 0
+  const orderTotal = total + deliveryCost - discount
   const deposit = orderTotal * 0.5
+
+  async function applyCoupon() {
+    const code = couponInput.trim()
+    if (!code) return
+    setCouponLoading(true)
+    setCouponError('')
+    try {
+      const result = await validateCoupon(TENANT, code, total + deliveryCost)
+      if (result.valid) {
+        setCouponApplied({ code: result.code!, discount: result.discount_amount! })
+        setCouponError('')
+      } else {
+        setCouponApplied(null)
+        setCouponError(result.error ?? 'Cupón inválido.')
+      }
+    } catch {
+      setCouponError('No se pudo validar el cupón.')
+    } finally {
+      setCouponLoading(false)
+    }
+  }
+
+  function removeCoupon() {
+    setCouponApplied(null)
+    setCouponInput('')
+    setCouponError('')
+  }
 
   function set(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }))
@@ -102,6 +135,7 @@ export default function CheckoutPage() {
         address_street: form.address_street || undefined,
         address_neighborhood: form.address_neighborhood || undefined,
         notes: form.notes || undefined,
+        coupon_code: couponApplied?.code || undefined,
       })
       clear()
       navigate(`/pedido/${order.id}`, { state: { order } })
@@ -314,6 +348,42 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
+              {/* Cupón */}
+              {!couponApplied ? (
+                <div className="mb-3">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Código de descuento"
+                      value={couponInput}
+                      onChange={(e) => { setCouponInput(e.target.value); setCouponError('') }}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), applyCoupon())}
+                      className="flex-1 border border-[#E8C8A0] rounded-xl px-3 py-2 text-sm text-[#3D1A0E] placeholder-[#C4A882] focus:outline-none focus:ring-2 focus:ring-[#E8889A]/30 focus:border-[#E8889A]"
+                    />
+                    <button
+                      type="button"
+                      onClick={applyCoupon}
+                      disabled={couponLoading || !couponInput.trim()}
+                      className="bg-[#F5E8D0] text-[#7C4A2D] font-semibold px-3 py-2 rounded-xl text-sm hover:bg-[#E8C8A0] disabled:opacity-50 transition-colors"
+                    >
+                      {couponLoading ? '...' : 'Aplicar'}
+                    </button>
+                  </div>
+                  {couponError && <p className="text-red-500 text-xs mt-1">{couponError}</p>}
+                </div>
+              ) : (
+                <div className="mb-3 flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-3 py-2">
+                  <span className="text-green-700 text-sm font-semibold">✓ {couponApplied.code}</span>
+                  <button
+                    type="button"
+                    onClick={removeCoupon}
+                    className="text-green-600 text-xs hover:text-red-500 transition-colors"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              )}
+
               <div className="border-t border-[#F5E8D0] pt-3 space-y-1.5 text-sm">
                 <div className="flex justify-between text-[#7C4A2D]">
                   <span>Subtotal</span>
@@ -327,6 +397,12 @@ export default function CheckoutPage() {
                         ? `$${deliveryCost.toLocaleString('es-AR')}`
                         : 'Seleccioná zona'}
                     </span>
+                  </div>
+                )}
+                {discount > 0 && (
+                  <div className="flex justify-between text-green-600 font-semibold">
+                    <span>Descuento ({couponApplied!.code})</span>
+                    <span>−${discount.toLocaleString('es-AR')}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-[#3D1A0E] text-base pt-1 border-t border-[#F5E8D0]">

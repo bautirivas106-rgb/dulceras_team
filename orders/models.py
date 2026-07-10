@@ -1,6 +1,51 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from core.models import TenantModel
+
+
+class Coupon(TenantModel):
+    PERCENTAGE = 'percentage'
+    FIXED = 'fixed'
+    TYPE_CHOICES = [(PERCENTAGE, 'Porcentaje'), (FIXED, 'Monto fijo')]
+
+    code = models.CharField(max_length=50)
+    discount_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2)
+    min_order_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    max_uses = models.PositiveIntegerField(default=0)       # 0 = ilimitado
+    uses_count = models.PositiveIntegerField(default=0)
+    valid_from = models.DateField(null=True, blank=True)
+    valid_until = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = [('tenant', 'code')]
+        verbose_name = 'Cupón'
+        verbose_name_plural = 'Cupones'
+
+    def __str__(self):
+        return f'{self.code} ({self.tenant})'
+
+    def is_valid_for(self, subtotal):
+        """Retorna (ok: bool, error: str|None)."""
+        if not self.is_active:
+            return False, 'Cupón inactivo.'
+        today = timezone.localdate()
+        if self.valid_from and today < self.valid_from:
+            return False, 'El cupón todavía no está vigente.'
+        if self.valid_until and today > self.valid_until:
+            return False, 'El cupón ya venció.'
+        if self.max_uses > 0 and self.uses_count >= self.max_uses:
+            return False, 'El cupón ya fue utilizado el máximo de veces.'
+        if self.min_order_amount > 0 and subtotal < self.min_order_amount:
+            return False, f'El monto mínimo para este cupón es ${self.min_order_amount:,.0f}.'
+        return True, None
+
+    def compute_discount(self, subtotal):
+        if self.discount_type == self.PERCENTAGE:
+            return min(subtotal * self.discount_value / 100, subtotal)
+        return min(self.discount_value, subtotal)
 
 
 class Order(TenantModel):
@@ -51,6 +96,11 @@ class Order(TenantModel):
     deposit_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=50)
     deposit_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     balance_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    coupon = models.ForeignKey(
+        Coupon, null=True, blank=True, on_delete=models.SET_NULL, related_name='orders'
+    )
+    coupon_code = models.CharField(max_length=50, blank=True)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     notes = models.TextField(blank=True)
     internal_notes = models.TextField(blank=True)
 

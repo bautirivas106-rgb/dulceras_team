@@ -6,7 +6,20 @@ from rest_framework import serializers
 from catalog.models import ProductVariant
 from customers.models import Customer, CustomerAddress
 from tenants.models import DeliveryZone
-from .models import Order, OrderItem, OrderStatusHistory
+from .models import Coupon, Order, OrderItem, OrderStatusHistory
+
+
+# ── Cupones ───────────────────────────────────────────────────────────────────
+
+class CouponSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Coupon
+        fields = (
+            'id', 'code', 'discount_type', 'discount_value',
+            'min_order_amount', 'max_uses', 'uses_count',
+            'valid_from', 'valid_until', 'is_active', 'created_at',
+        )
+        read_only_fields = ('uses_count', 'created_at')
 
 
 # ── Lectura ───────────────────────────────────────────────────────────────────
@@ -41,7 +54,7 @@ class OrderListSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'status', 'status_display',
             'customer', 'delivery_method', 'delivery_method_display',
-            'required_date', 'total', 'deposit_amount', 'balance_amount',
+            'required_date', 'discount_amount', 'total', 'deposit_amount', 'balance_amount',
             'created_at',
         )
 
@@ -60,7 +73,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             'id', 'status', 'status_display',
             'customer', 'delivery_method', 'delivery_method_display',
             'delivery_zone', 'delivery_zone_name', 'required_date',
-            'subtotal', 'delivery_cost', 'total',
+            'subtotal', 'delivery_cost', 'coupon_code', 'discount_amount', 'total',
             'deposit_percentage', 'deposit_amount', 'balance_amount',
             'notes', 'items', 'status_history', 'created_at', 'updated_at',
         )
@@ -88,6 +101,7 @@ class OrderCreateSerializer(serializers.Serializer):
     address_neighborhood = serializers.CharField(max_length=100, required=False, allow_blank=True, default='')
 
     notes = serializers.CharField(required=False, allow_blank=True, default='')
+    coupon_code = serializers.CharField(required=False, allow_blank=True, default='')
 
     def validate(self, attrs):
         tenant = self.context['tenant']
@@ -230,7 +244,24 @@ class OrderCreateSerializer(serializers.Serializer):
         except Exception:
             deposit_pct = 50
 
-        total = subtotal + delivery_cost
+        # Cupón: validar y calcular descuento
+        coupon = None
+        coupon_code_snapshot = ''
+        discount_amount = 0
+        raw_code = (validated_data.get('coupon_code', '') or '').strip().upper()
+        if raw_code:
+            try:
+                coupon = Coupon.objects.get(tenant=tenant, code__iexact=raw_code)
+                ok, _err = coupon.is_valid_for(subtotal)
+                if ok:
+                    discount_amount = float(coupon.compute_discount(subtotal))
+                    coupon_code_snapshot = coupon.code
+                else:
+                    coupon = None
+            except Coupon.DoesNotExist:
+                pass
+
+        total = subtotal + delivery_cost - discount_amount
         deposit_amount = round(total * deposit_pct / 100, 2)
         balance_amount = total - deposit_amount
 
@@ -244,12 +275,18 @@ class OrderCreateSerializer(serializers.Serializer):
             required_date=validated_data['required_date'],
             subtotal=subtotal,
             delivery_cost=delivery_cost,
+            coupon=coupon,
+            coupon_code=coupon_code_snapshot,
+            discount_amount=discount_amount,
             total=total,
             deposit_percentage=deposit_pct,
             deposit_amount=deposit_amount,
             balance_amount=balance_amount,
             notes=validated_data.get('notes', ''),
         )
+
+        if coupon:
+            Coupon.objects.filter(pk=coupon.pk).update(uses_count=coupon.uses_count + 1)
 
         OrderItem.objects.bulk_create([
             OrderItem(

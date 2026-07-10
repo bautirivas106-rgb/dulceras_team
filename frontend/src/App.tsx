@@ -22,6 +22,7 @@ import CalendarPage from './pages/admin/calendar/CalendarPage'
 import ReportsPage from './pages/admin/reports/ReportsPage'
 import SettingsPage from './pages/admin/settings/SettingsPage'
 import BillingPage from './pages/admin/billing/BillingPage'
+import CouponsPage from './pages/admin/coupons/CouponsPage'
 
 import SuperadminLayout from './pages/superadmin/SuperadminLayout'
 import MetricsPage from './pages/superadmin/MetricsPage'
@@ -66,6 +67,7 @@ export default function App() {
               <Route path="reports" element={<ReportsPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="billing" element={<BillingPage />} />
+              <Route path="coupons" element={<CouponsPage />} />
             </Route>
 
             {/* Superadmin protected */}

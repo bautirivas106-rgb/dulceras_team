@@ -12,10 +12,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from tenants.models import Tenant
-from .models import Order, OrderItem, OrderStatusHistory
+from .models import Coupon, Order, OrderItem, OrderStatusHistory
 from .serializers import (
-    OrderCreateSerializer, OrderDetailSerializer, OrderListSerializer,
-    OrderStatusUpdateSerializer,
+    CouponSerializer, OrderCreateSerializer, OrderDetailSerializer,
+    OrderListSerializer, OrderStatusUpdateSerializer,
 )
 
 ACTIVE_STATUSES = [
@@ -102,6 +102,47 @@ class PublicOrderDetailView(APIView):
             pk=pk, tenant=tenant,
         )
         return Response(OrderDetailSerializer(order).data)
+
+
+class PublicCouponValidateView(APIView):
+    """
+    POST /api/public/{slug}/coupons/validate/
+    Body: { code, subtotal }
+    Responde con el descuento calculado sin aplicarlo (no incrementa uses_count).
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, tenant_slug):
+        tenant = get_object_or_404(Tenant, slug=tenant_slug, is_active=True)
+        code = (request.data.get('code', '') or '').strip().upper()
+        subtotal = request.data.get('subtotal', 0)
+
+        if not code:
+            return Response({'valid': False, 'error': 'Ingresá un código de cupón.'}, status=400)
+
+        try:
+            subtotal = float(subtotal)
+        except (TypeError, ValueError):
+            return Response({'valid': False, 'error': 'Subtotal inválido.'}, status=400)
+
+        try:
+            coupon = Coupon.objects.get(tenant=tenant, code__iexact=code)
+        except Coupon.DoesNotExist:
+            return Response({'valid': False, 'error': 'Cupón no encontrado.'})
+
+        ok, error = coupon.is_valid_for(subtotal)
+        if not ok:
+            return Response({'valid': False, 'error': error})
+
+        discount = float(coupon.compute_discount(subtotal))
+        return Response({
+            'valid': True,
+            'code': coupon.code,
+            'discount_type': coupon.discount_type,
+            'discount_value': str(coupon.discount_value),
+            'discount_amount': discount,
+            'final_subtotal': subtotal - discount,
+        })
 
 
 # ── Admin ─────────────────────────────────────────────────────────────────────
@@ -309,7 +350,7 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
         })
 
     @action(detail=False, methods=['get'], url_path='reports')
-    def reports(self, request):
+    def reports(self, request):  # noqa: C901
         """
         Reporte financiero y operativo por período.
         ?period=today|week|month|all  (default: month)
@@ -419,3 +460,31 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
             'by_zone': by_zone,
             'daily': daily,
         })
+
+
+class AdminCouponViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CouponSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = Coupon.objects.order_by('-created_at')
+        if not user.is_platform_owner:
+            qs = qs.filter(tenant=user.tenant)
+        return qs
+
+    def perform_create(self, serializer):
+        code = (serializer.validated_data.get('code', '') or '').upper()
+        serializer.save(tenant=self.request.user.tenant, code=code)
+
+    def perform_update(self, serializer):
+        if 'code' in serializer.validated_data:
+            serializer.validated_data['code'] = serializer.validated_data['code'].upper()
+        serializer.save()
+
+    @action(detail=True, methods=['post'], url_path='toggle')
+    def toggle_active(self, request, pk=None):
+        coupon = self.get_object()
+        coupon.is_active = not coupon.is_active
+        coupon.save(update_fields=['is_active', 'updated_at'])
+        return Response(CouponSerializer(coupon).data)
