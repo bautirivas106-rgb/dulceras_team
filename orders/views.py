@@ -1,7 +1,8 @@
 from collections import defaultdict
 from datetime import timedelta
 
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
+from django.db.models.functions import TruncDate
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -11,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from tenants.models import Tenant
-from .models import Order, OrderStatusHistory
+from .models import Order, OrderItem, OrderStatusHistory
 from .serializers import (
     OrderCreateSerializer, OrderDetailSerializer, OrderListSerializer,
     OrderStatusUpdateSerializer,
@@ -20,6 +21,10 @@ from .serializers import (
 ACTIVE_STATUSES = [
     Order.PENDING_DEPOSIT, Order.DEPOSIT_PAID, Order.CONFIRMED,
     Order.IN_PRODUCTION, Order.READY, Order.OUT_FOR_DELIVERY, Order.DELIVERED,
+]
+PAID_STATUSES = [
+    Order.DEPOSIT_PAID, Order.CONFIRMED, Order.IN_PRODUCTION,
+    Order.READY, Order.OUT_FOR_DELIVERY, Order.DELIVERED,
 ]
 
 
@@ -286,4 +291,116 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
             'date': date_str,
             'orders': OrderDetailSerializer(orders, many=True).data,
             'production_summary': summary,
+        })
+
+    @action(detail=False, methods=['get'], url_path='reports')
+    def reports(self, request):
+        """
+        Reporte financiero y operativo por período.
+        ?period=today|week|month|all  (default: month)
+        """
+        period = request.query_params.get('period', 'month')
+        tenant = self._get_tenant()
+        if not tenant:
+            return Response({'error': 'tenant requerido.'}, status=400)
+
+        today = timezone.localdate()
+        if period == 'today':
+            from_date, to_date = today, today
+        elif period == 'week':
+            from_date = today - timedelta(days=today.weekday())
+            to_date = today
+        elif period == 'month':
+            from_date = today.replace(day=1)
+            to_date = today
+        else:
+            from_date, to_date = None, None
+
+        def date_qs(qs):
+            if from_date:
+                qs = qs.filter(created_at__date__gte=from_date)
+            if to_date:
+                qs = qs.filter(created_at__date__lte=to_date)
+            return qs
+
+        base = date_qs(Order.objects.filter(tenant=tenant, status__in=ACTIVE_STATUSES))
+        paid = Q(status__in=PAID_STATUSES)
+        unpaid_balance = Q(status__in=[s for s in PAID_STATUSES if s != Order.DELIVERED])
+
+        # ── Ingresos ─────────────────────────────────────────────────────────
+        totals = base.aggregate(
+            total=Sum('total'),
+            deposits=Sum('deposit_amount', filter=paid),
+            balance_pending=Sum('balance_amount', filter=unpaid_balance),
+            order_count=Count('id'),
+        )
+
+        # ── Por estado ────────────────────────────────────────────────────────
+        status_display = dict(Order.STATUS_CHOICES)
+        by_status = [
+            {
+                'status': row['status'],
+                'label': status_display.get(row['status'], row['status']),
+                'count': row['count'],
+            }
+            for row in base.values('status').annotate(count=Count('id')).order_by('-count')
+        ]
+
+        # ── Productos más vendidos ────────────────────────────────────────────
+        item_filters = {'order__tenant': tenant, 'order__status__in': PAID_STATUSES}
+        if from_date:
+            item_filters['order__created_at__date__gte'] = from_date
+        if to_date:
+            item_filters['order__created_at__date__lte'] = to_date
+        item_base = OrderItem.objects.filter(**item_filters)
+        top_products = [
+            {**row, 'revenue': float(row['revenue'] or 0)}
+            for row in item_base
+            .values('product_name', 'variant_name')
+            .annotate(qty=Sum('quantity'), revenue=Sum('subtotal'))
+            .order_by('-qty')[:10]
+        ]
+
+        # ── Por zona ──────────────────────────────────────────────────────────
+        pickup = base.filter(delivery_method=Order.PICKUP).aggregate(
+            count=Count('id'), revenue=Sum('total')
+        )
+        by_zone = [
+            {'zone': 'Retiro en local', 'count': pickup['count'] or 0,
+             'revenue': float(pickup['revenue'] or 0)},
+            *[
+                {'zone': row['delivery_zone__name'] or 'Sin zona',
+                 'count': row['count'],
+                 'revenue': float(row['revenue'] or 0)}
+                for row in base.filter(delivery_method=Order.DELIVERY)
+                .values('delivery_zone__name')
+                .annotate(count=Count('id'), revenue=Sum('total'))
+                .order_by('-count')
+            ],
+        ]
+
+        # ── Ventas diarias ────────────────────────────────────────────────────
+        daily = [
+            {'date': str(row['day']), 'count': row['count'], 'revenue': float(row['revenue'] or 0)}
+            for row in date_qs(Order.objects.filter(tenant=tenant, status__in=PAID_STATUSES))
+            .annotate(day=TruncDate('created_at'))
+            .values('day')
+            .annotate(count=Count('id'), revenue=Sum('total'))
+            .order_by('day')
+        ]
+
+        return Response({
+            'period': period,
+            'from_date': str(from_date) if from_date else None,
+            'to_date': str(to_date) if to_date else None,
+            'revenue': {
+                'total': float(totals['total'] or 0),
+                'deposits_collected': float(totals['deposits'] or 0),
+                'balance_pending': float(totals['balance_pending'] or 0),
+                'order_count': totals['order_count'] or 0,
+            },
+            'by_status': by_status,
+            'top_products': top_products,
+            'by_zone': by_zone,
+            'daily': daily,
         })

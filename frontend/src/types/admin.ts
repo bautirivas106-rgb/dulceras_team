@@ -136,6 +136,49 @@ export interface ProductionDay {
   production_summary: ProductionSummaryItem[]
 }
 
+export interface ReportRevenue {
+  total: number
+  deposits_collected: number
+  balance_pending: number
+  order_count: number
+}
+
+export interface ReportByStatus {
+  status: string
+  label: string
+  count: number
+}
+
+export interface ReportTopProduct {
+  product_name: string
+  variant_name: string
+  qty: number
+  revenue: number
+}
+
+export interface ReportByZone {
+  zone: string
+  count: number
+  revenue: number
+}
+
+export interface ReportDaily {
+  date: string
+  count: number
+  revenue: number
+}
+
+export interface ReportData {
+  period: string
+  from_date: string | null
+  to_date: string | null
+  revenue: ReportRevenue
+  by_status: ReportByStatus[]
+  top_products: ReportTopProduct[]
+  by_zone: ReportByZone[]
+  daily: ReportDaily[]
+}
+
 export const STATUS_TRANSITIONS: Record<string, string[]> = {
   draft: ['pending_deposit', 'cancelled'],
   pending_deposit: ['deposit_paid', 'confirmed', 'cancelled'],

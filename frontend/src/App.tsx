@@ -18,6 +18,7 @@ import OrderDetailPage from './pages/admin/orders/OrderDetailPage'
 import CustomersPage from './pages/admin/customers/CustomersPage'
 import CatalogPage from './pages/admin/catalog/CatalogPage'
 import CalendarPage from './pages/admin/calendar/CalendarPage'
+import ReportsPage from './pages/admin/reports/ReportsPage'
 
 export default function App() {
   return (
@@ -52,6 +53,7 @@ export default function App() {
               <Route path="customers" element={<CustomersPage />} />
               <Route path="catalog" element={<CatalogPage />} />
               <Route path="calendar" element={<CalendarPage />} />
+              <Route path="reports" element={<ReportsPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

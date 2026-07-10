@@ -31,7 +31,7 @@ export default function OrderConfirmation() {
     setPaying(true)
     setPayError('')
     try {
-      const result = await initiatePayment(order.id)
+      const result = await initiatePayment(order!.id)
       const url = result.sandbox_init_point || result.init_point
       if (url) {
         window.location.href = url

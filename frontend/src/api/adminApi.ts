@@ -8,6 +8,7 @@ import type {
   OrderStats,
   PaginatedResponse,
   ProductionDay,
+  ReportData,
 } from '../types/admin'
 
 // ── Orders ─────────────────────────────────────────────────────────────────
@@ -38,6 +39,11 @@ export const getCalendar = (month: string) =>
 
 export const getProductionDay = (date: string) =>
   adminClient.get<ProductionDay>(`/api/admin/orders/production/`, { params: { date } })
+
+// ── Reports ────────────────────────────────────────────────────────────────
+
+export const getReports = (period: string) =>
+  adminClient.get<ReportData>('/api/admin/orders/reports/', { params: { period } })
 
 // ── Notifications ──────────────────────────────────────────────────────────
 

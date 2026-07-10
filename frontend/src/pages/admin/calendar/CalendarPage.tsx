@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCalendar, getProductionDay } from '../../../api/adminApi'
-import type { CalendarData, CalendarOrderItem, ProductionDay } from '../../../types/admin'
+import type { CalendarData, ProductionDay } from '../../../types/admin'
 import { STATUS_COLORS, STATUS_LABELS } from '../../../types/admin'
 
 const DAYS_OF_WEEK = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
@@ -263,9 +263,9 @@ export default function CalendarPage() {
                           <div className="flex items-start justify-between">
                             <div>
                               <p className="text-sm font-semibold text-gray-800">
-                                #{order.id} — {order.customer_name}
+                                #{order.id} — {order.customer.name}
                               </p>
-                              <p className="text-xs text-gray-500">{order.customer_phone}</p>
+                              <p className="text-xs text-gray-500">{order.customer.phone}</p>
                             </div>
                             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[order.status] ?? 'bg-gray-100 text-gray-600'}`}>
                               {STATUS_LABELS[order.status] ?? order.status}
