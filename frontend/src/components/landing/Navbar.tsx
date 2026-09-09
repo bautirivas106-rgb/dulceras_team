@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Menu, X, User, ShoppingCart } from 'lucide-react'
 import { DockRow, DockIcon } from '@/components/ui/dock'
 
@@ -10,6 +10,7 @@ const NAV_LINKS = [
 ]
 
 export default function Navbar() {
+  const navigate = useNavigate()
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
 
@@ -72,10 +73,10 @@ export default function Navbar() {
         {/* Actions desktop */}
         <div className="hidden md:flex items-center gap-4">
           <DockRow>
-            <DockIcon label="Mi cuenta">
+            <DockIcon label="Mi cuenta" onClick={() => navigate('/cuenta/login')}>
               <User size={18} />
             </DockIcon>
-            <DockIcon label="Carrito">
+            <DockIcon label="Carrito" onClick={() => navigate('/checkout')}>
               <ShoppingCart size={18} />
             </DockIcon>
           </DockRow>
