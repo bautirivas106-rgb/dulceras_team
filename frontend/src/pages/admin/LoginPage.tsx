@@ -1,14 +1,15 @@
 import { type FormEvent, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
-  const { login } = useAuth()
-  const navigate = useNavigate()
+  const { login }    = useAuth()
+  const navigate     = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [error, setError]       = useState('')
+  const [loading, setLoading]   = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -25,26 +26,65 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="text-3xl mb-2">🎂</div>
-          <h1 className="text-2xl font-bold text-gray-900">Dulceras Team</h1>
-          <p className="text-sm text-gray-500 mt-1">Panel de administración</p>
+    <div
+      className="min-h-screen font-poppins flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: '#FDF6EC' }}
+    >
+      {/* Aurora sutil de fondo */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
+          backgroundImage: `
+            repeating-linear-gradient(100deg, #FDF6EC 0%, #FDF6EC 7%, transparent 10%, transparent 12%, #FDF6EC 16%),
+            repeating-linear-gradient(100deg, #F0A0C4 10%, #E285AF 15%, #EFE2CB 20%, #F7C4DD 25%, #F0A0C4 30%)
+          `,
+          backgroundSize: '300% 200%, 200% 100%',
+          backgroundPosition: '50% 50%, 50% 50%',
+          filter: 'blur(40px)',
+          opacity: 0.2,
+          animation: 'aurora-move 60s linear infinite',
+          maskImage: 'radial-gradient(ellipse at 50% 0%, black 10%, transparent 70%)',
+          WebkitMaskImage: 'radial-gradient(ellipse at 50% 0%, black 10%, transparent 70%)',
+        }}
+      />
+
+      <div className="w-full max-w-sm relative" style={{ zIndex: 1 }}>
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <img
+            src="/brand/logo-icon.png"
+            alt="Dulceras Team"
+            style={{ height: 64, width: 'auto', marginBottom: 12 }}
+          />
+          <img
+            src="/brand/logo-wordmark.png"
+            alt="Dulceras Team"
+            style={{ height: 48, width: 'auto', marginBottom: 8 }}
+          />
+          <p className="text-brown-soft text-sm font-medium">Panel de administración</p>
         </div>
 
+        {/* Card */}
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 space-y-5"
+          className="bg-white rounded-2xl space-y-5"
+          style={{ padding: '32px 28px', boxShadow: '0 10px 40px rgba(58,36,23,0.10)' }}
         >
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
+            <div
+              className="flex items-center gap-2.5 text-sm rounded-xl px-4 py-3"
+              style={{ background: '#FFF0F0', border: '1px solid rgba(226,133,175,0.3)', color: '#9B2335' }}
+            >
+              <AlertCircle size={15} style={{ flexShrink: 0 }} />
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label
+              className="block text-sm font-medium text-brown-soft mb-1.5"
+            >
               Usuario
             </label>
             <input
@@ -53,13 +93,23 @@ export default function LoginPage() {
               onChange={(e) => setUsername(e.target.value)}
               required
               autoFocus
-              className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8889A] focus:border-transparent"
               placeholder="tu_usuario"
+              className="w-full text-sm outline-none rounded-xl px-4 py-2.5"
+              style={{
+                border: '1.5px solid rgba(58,36,23,0.15)',
+                color: '#3A2417',
+                background: '#fff',
+                transition: 'border-color 0.2s',
+              }}
+              onFocus={e => (e.currentTarget.style.borderColor = '#E285AF')}
+              onBlur={e => (e.currentTarget.style.borderColor = 'rgba(58,36,23,0.15)')}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label
+              className="block text-sm font-medium text-brown-soft mb-1.5"
+            >
               Contraseña
             </label>
             <input
@@ -67,23 +117,49 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8889A] focus:border-transparent"
               placeholder="••••••••"
+              className="w-full text-sm outline-none rounded-xl px-4 py-2.5"
+              style={{
+                border: '1.5px solid rgba(58,36,23,0.15)',
+                color: '#3A2417',
+                background: '#fff',
+                transition: 'border-color 0.2s',
+              }}
+              onFocus={e => (e.currentTarget.style.borderColor = '#E285AF')}
+              onBlur={e => (e.currentTarget.style.borderColor = 'rgba(58,36,23,0.15)')}
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#3D1A0E] text-white font-medium py-2.5 rounded-lg text-sm hover:bg-[#5C2A18] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full text-sm font-semibold text-white rounded-xl py-3"
+            style={{
+              background: loading
+                ? 'rgba(226,133,175,0.6)'
+                : 'linear-gradient(135deg, #F0A0C4, #E285AF)',
+              border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+              boxShadow: loading ? 'none' : '0 6px 18px rgba(226,133,175,0.45)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            }}
+            onMouseEnter={e => {
+              if (!loading) {
+                e.currentTarget.style.transform = 'translateY(-1px)'
+                e.currentTarget.style.boxShadow = '0 10px 22px rgba(226,133,175,0.55)'
+              }
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = ''
+              e.currentTarget.style.boxShadow = loading ? 'none' : '0 6px 18px rgba(226,133,175,0.45)'
+            }}
           >
             {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-5">
+        <p className="text-center text-sm text-brown-soft mt-5">
           ¿Todavía no tenés cuenta?{' '}
-          <Link to="/register" className="text-[#E8889A] font-medium hover:underline">
+          <Link to="/register" className="font-semibold no-underline" style={{ color: '#E285AF' }}>
             Registrá tu negocio
           </Link>
         </p>
