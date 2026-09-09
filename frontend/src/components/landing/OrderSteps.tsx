@@ -2,9 +2,24 @@ import { ShoppingCart, CreditCard, Package, Clock, MapPin } from 'lucide-react'
 import { motion, type Variants } from 'framer-motion'
 
 const STEPS = [
-  { Icon: ShoppingCart, title: 'Elegís tu antojo',    desc: 'Explorá el catálogo, elegí el producto y el tamaño que más te tiente.' },
-  { Icon: CreditCard,   title: 'Mandás la seña',      desc: 'Confirmás el pedido con una seña por Mercado Pago. Rápido y seguro.' },
-  { Icon: Package,      title: 'Coordinamos y listo', desc: 'Te avisamos cuando está listo. Retirás en Almagro o te lo llevamos a CABA.' },
+  {
+    Icon: ShoppingCart,
+    title: 'Elegís tu antojo',
+    desc: 'Explorá el catálogo, elegí el producto y el tamaño que más te tiente.',
+    num: 1,
+  },
+  {
+    Icon: CreditCard,
+    title: 'Mandás la seña',
+    desc: 'Confirmás el pedido con una seña por Mercado Pago. Rápido y seguro.',
+    num: 2,
+  },
+  {
+    Icon: Package,
+    title: 'Coordinamos y listo',
+    desc: 'Te avisamos cuando está listo. Retirás en Almagro o te lo llevamos a tu casa.',
+    num: 3,
+  },
 ]
 
 const containerVariants: Variants = {
@@ -17,10 +32,11 @@ const itemVariants: Variants = {
   visible: { opacity: 1, y: 0 },
 }
 
-export default function HowToOrder() {
+export default function OrderSteps() {
   return (
     <section id="como-pedir" className="px-6 py-24" style={{ background: '#F6EAD6' }}>
       <div style={{ maxWidth: 980, margin: '0 auto' }}>
+        {/* Header */}
         <p
           className="text-center font-semibold text-pink-deep"
           style={{ fontSize: '0.82rem', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}
@@ -34,6 +50,7 @@ export default function HowToOrder() {
           Cómo hacer tu pedido
         </h2>
 
+        {/* Steps */}
         <motion.div
           className="flex flex-col md:flex-row justify-between gap-10 relative"
           variants={containerVariants}
@@ -41,7 +58,7 @@ export default function HowToOrder() {
           whileInView="visible"
           viewport={{ once: true, margin: '-60px' }}
         >
-          {/* Dotted connector */}
+          {/* Dotted connector line (desktop) */}
           <div
             aria-hidden="true"
             className="hidden md:block absolute"
@@ -60,6 +77,7 @@ export default function HowToOrder() {
               className="flex-1 text-center relative"
               style={{ zIndex: 1 }}
             >
+              {/* Icon circle */}
               <motion.div
                 className="mx-auto flex items-center justify-center mb-4"
                 style={{
@@ -72,6 +90,7 @@ export default function HowToOrder() {
               >
                 <Icon size={24} />
               </motion.div>
+
               <h3
                 className="font-fraunces font-semibold text-brown mx-auto"
                 style={{ fontSize: '1.15rem', marginBottom: 8 }}
@@ -93,16 +112,22 @@ export default function HowToOrder() {
           className="bg-white rounded-2xl flex flex-wrap items-center justify-center gap-7 text-sm text-brown-soft"
           style={{
             maxWidth: 860, margin: '56px auto 0',
-            padding: '22px 30px', boxShadow: '0 8px 24px rgba(58,36,23,0.06)', lineHeight: 1.6,
+            padding: '22px 30px',
+            boxShadow: '0 8px 24px rgba(58,36,23,0.06)',
+            lineHeight: 1.6,
           }}
         >
           <span className="flex items-center gap-2">
             <Clock size={15} style={{ color: '#E285AF', flexShrink: 0 }} />
-            <span><strong className="text-brown">Anticipación mínima:</strong> 48 hs</span>
+            <span>
+              <strong className="text-brown">Anticipación mínima:</strong> 48 hs
+            </span>
           </span>
           <span className="flex items-center gap-2">
             <MapPin size={15} style={{ color: '#E285AF', flexShrink: 0 }} />
-            <span><strong className="text-brown">Delivery zona CABA</strong> según barrio · Retiro gratis en Almagro</span>
+            <span>
+              <strong className="text-brown">Delivery zona CABA</strong> según barrio · Retiro gratis en Almagro
+            </span>
           </span>
         </div>
       </div>

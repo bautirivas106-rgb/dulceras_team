@@ -1,0 +1,53 @@
+import type { PublicProduct } from '@/types/landing'
+
+// TODO: reemplazar con datos reales de /api/public/products/featured/
+export const MOCK_FEATURED_PRODUCTS: PublicProduct[] = [
+  {
+    id: '1',
+    name: 'Cookie Chocolate Chips',
+    slug: 'cookie-chocolate-chips',
+    shortDescription: 'Crocante por fuera, suave y melosa por dentro. Estilo Nueva York.',
+    price: 850,
+    formattedPrice: '$850',
+    imageUrl: '',
+    categoryName: 'Cookies estilo NY',
+    isFeatured: true,
+    isAvailable: true,
+  },
+  {
+    id: '2',
+    name: 'Brownie Clásico',
+    slug: 'brownie-clasico',
+    shortDescription: 'Fudgy de chocolate amargo con costra crujiente. El favorito.',
+    price: 3400,
+    formattedPrice: 'Desde $3.400',
+    imageUrl: '',
+    categoryName: 'Brownie Box',
+    isFeatured: true,
+    isAvailable: true,
+  },
+  {
+    id: '3',
+    name: 'Cheesecake de Dulce de Leche',
+    slug: 'cheesecake-dulce-de-leche',
+    shortDescription: 'Base de galletitas, relleno cremoso y cobertura de dulce de leche.',
+    price: 1400,
+    formattedPrice: 'Desde $1.400',
+    imageUrl: '',
+    categoryName: 'Postres bajoneros',
+    isFeatured: true,
+    isAvailable: true,
+  },
+  {
+    id: '4',
+    name: 'Torta de Chocolate',
+    slug: 'torta-de-chocolate',
+    shortDescription: 'Húmeda con ganache y decoración artesanal. El postre que todos piden.',
+    price: 9000,
+    formattedPrice: 'Desde $9.000',
+    imageUrl: '',
+    categoryName: 'Tortas enteras',
+    isFeatured: true,
+    isAvailable: true,
+  },
+]

@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Adelline';
+  src: url('/fonts/adelline.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --color-cream: #FDF6EC;
   --color-cream-dark: #F5E8D0;
@@ -10,8 +18,29 @@
   --color-mocha: #7C4A2D;
   --color-mocha-light: #A0673A;
 
-  --font-sans: 'Georgia', 'Times New Roman', serif;
-  --font-display: 'Georgia', serif;
+  --font-sans: 'Adelline', 'Georgia', serif;
+  --font-display: 'Adelline', serif;
+  --font-logo: 'Adelline', cursive;
+
+  /* Brand colors — landing */
+  --color-brand: #ED58AA;
+  --color-brand-dark: #BC0070;
+  --color-brand-soft: #F4BDE0;
+  --color-brand-neutral: #EEE8E6;
+
+  /* Marquee animations */
+  --animate-marquee: marquee 30s linear infinite;
+  --animate-marquee-reverse: marquee-reverse 30s linear infinite;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes marquee-reverse {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
 }
 
 * {
@@ -21,10 +50,181 @@
 body {
   margin: 0;
   background-color: #FDF6EC;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Adelline', system-ui, -apple-system, sans-serif;
   color: #3D1A0E;
 }
 
 html {
   scroll-behavior: smooth;
 }
+
+/* ── Gradient Button ─────────────────────────────────────────────────────── */
+
+@property --pos-x        { syntax: '<percentage>'; initial-value: 11.14%;  inherits: false; }
+@property --pos-y        { syntax: '<percentage>'; initial-value: 140%;    inherits: false; }
+@property --spread-x     { syntax: '<percentage>'; initial-value: 150%;    inherits: false; }
+@property --spread-y     { syntax: '<percentage>'; initial-value: 180.06%; inherits: false; }
+@property --color-1      { syntax: '<color>';      initial-value: #3D1A0E; inherits: false; }
+@property --color-2      { syntax: '<color>';      initial-value: #6D1B3E; inherits: false; }
+@property --color-3      { syntax: '<color>';      initial-value: #BC0070; inherits: false; }
+@property --color-4      { syntax: '<color>';      initial-value: #D4558F; inherits: false; }
+@property --color-5      { syntax: '<color>';      initial-value: #ED58AA; inherits: false; }
+@property --border-angle { syntax: '<angle>';      initial-value: 20deg;   inherits: true;  }
+@property --border-color-1 { syntax: '<color>';   initial-value: hsla(330, 75%, 60%, 0.2); inherits: true; }
+@property --border-color-2 { syntax: '<color>';   initial-value: hsla(330, 75%, 40%, 0.75); inherits: true; }
+@property --stop-1       { syntax: '<percentage>'; initial-value: 37.35%; inherits: false; }
+@property --stop-2       { syntax: '<percentage>'; initial-value: 61.36%; inherits: false; }
+@property --stop-3       { syntax: '<percentage>'; initial-value: 78.42%; inherits: false; }
+@property --stop-4       { syntax: '<percentage>'; initial-value: 89.52%; inherits: false; }
+@property --stop-5       { syntax: '<percentage>'; initial-value: 100%;   inherits: false; }
+
+.gradient-button {
+  position: relative;
+  appearance: none;
+  cursor: pointer;
+  background: radial-gradient(
+    var(--spread-x) var(--spread-y) at var(--pos-x) var(--pos-y),
+    var(--color-1) var(--stop-1),
+    var(--color-2) var(--stop-2),
+    var(--color-3) var(--stop-3),
+    var(--color-4) var(--stop-4),
+    var(--color-5) var(--stop-5)
+  );
+  transition:
+    --pos-x 0.5s, --pos-y 0.5s, --spread-x 0.5s, --spread-y 0.5s,
+    --color-1 0.5s, --color-2 0.5s, --color-3 0.5s, --color-4 0.5s, --color-5 0.5s,
+    --border-angle 0.5s, --border-color-1 0.5s, --border-color-2 0.5s,
+    --stop-1 0.5s, --stop-2 0.5s, --stop-3 0.5s, --stop-4 0.5s, --stop-5 0.5s;
+}
+
+.gradient-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(var(--border-angle), var(--border-color-1), var(--border-color-2));
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Variante rosa/brand (primary) */
+.gradient-button-pink {
+  --color-1: #3D1A0E;
+  --color-2: #6D1B3E;
+  --color-3: #BC0070;
+  --color-4: #D4558F;
+  --color-5: #ED58AA;
+  --border-angle: 20deg;
+  --border-color-1: hsla(330, 75%, 70%, 0.2);
+  --border-color-2: hsla(330, 75%, 50%, 0.75);
+}
+
+.gradient-button-pink:hover {
+  --pos-x: 0%;
+  --pos-y: 91.51%;
+  --spread-x: 120%;
+  --spread-y: 103%;
+  --color-1: #ED58AA;
+  --color-2: #D4758A;
+  --color-3: #C47A3E;
+  --color-4: #7C2D12;
+  --color-5: #3D1A0E;
+  --border-angle: 190deg;
+  --border-color-1: hsla(330, 78%, 90%, 0.1);
+  --border-color-2: hsla(330, 75%, 90%, 0.6);
+  --stop-1: 0%;
+  --stop-2: 8.8%;
+  --stop-3: 21.44%;
+  --stop-4: 71.34%;
+  --stop-5: 85.76%;
+}
+
+/* Variante chocolate/caramel (secondary) */
+.gradient-button-chocolate {
+  --color-1: #1A0A05;
+  --color-2: #3D1A0E;
+  --color-3: #7C4A2D;
+  --color-4: #C47A3E;
+  --color-5: #D4A76A;
+  --border-angle: 200deg;
+  --border-color-1: hsla(30, 60%, 70%, 0.5);
+  --border-color-2: hsla(30, 50%, 50%, 0.15);
+}
+
+.gradient-button-chocolate:hover {
+  --pos-x: 0%;
+  --pos-y: 95%;
+  --spread-x: 110%;
+  --spread-y: 110%;
+  --color-1: #D4A76A;
+  --color-2: #C47A3E;
+  --color-3: #7C4A2D;
+  --color-4: #3D1A0E;
+  --color-5: #1A0A05;
+  --stop-1: 0%;
+  --stop-2: 10%;
+  --stop-3: 35%;
+  --stop-4: 71%;
+  --stop-5: 90%;
+  --border-angle: 210deg;
+  --border-color-1: hsla(30, 75%, 90%, 0.2);
+  --border-color-2: hsla(30, 50%, 90%, 0.75);
+}
+
+/* ── New landing design tokens ──────────────────────────────────────── */
+@theme {
+  --color-cream-2:    #F6EAD6;
+  --color-pink:       #F0A0C4;
+  --color-pink-deep:  #E285AF;
+  --color-brown:      #3A2417;
+  --color-brown-soft: #5A3B29;
+  --color-tostado:    #EFE2CB;
+
+  --font-fraunces: 'Fraunces', Georgia, serif;
+  --font-poppins:  'Poppins', system-ui, sans-serif;
+  --font-caveat:   'Caveat', cursive;
+}
+
+/* ── Aurora background animation ───────────────────────────────────── */
+@keyframes aurora-move {
+  from { background-position: 50% 50%, 50% 50%; }
+  to   { background-position: 350% 50%, 350% 50%; }
+}
+
+/* ── Rotating border (outline buttons) ─────────────────────────────── */
+@property --angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes rotate-border { to { --angle: 360deg; } }
+
+.btn-animated-border {
+  position: relative;
+}
+.btn-animated-border::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(from var(--angle), transparent 0%, #E285AF 12%, transparent 26%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: rotate-border 4s linear infinite;
+  pointer-events: none;
+}
+
+/* ── Nav animated underline ─────────────────────────────────────────── */
+.nav-underline {
+  position: relative;
+  padding-bottom: 4px;
+}
+.nav-underline::after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: 0;
+  width: 0; height: 2px;
+  background: #E285AF;
+  transition: width 0.25s ease;
+}
+.nav-underline:hover::after { width: 100%; }

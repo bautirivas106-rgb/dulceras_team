@@ -1,115 +1,196 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { Menu, X, ShoppingCart, User } from 'lucide-react'
 import { useCart } from '../../../context/CartContext'
-import { useBranding } from '../../../context/BrandingContext'
 import { useCustomerAuth } from '../../../context/CustomerAuthContext'
+import { DockRow, DockIcon } from '../../../components/ui/dock'
 import CartDrawer from '../../../components/CartDrawer'
 
+const NAV_LINKS = [
+  { label: 'Catálogo',   href: '#catalogo' },
+  { label: 'Cómo pedir', href: '#como-pedir' },
+  { label: 'Reseñas',    href: '#nosotros' },
+]
+
 export default function Header() {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [cartOpen, setCartOpen] = useState(false)
-  const { itemCount } = useCart()
-  const { business_name, logo_url } = useBranding()
-  const { customer, isLoggedIn } = useCustomerAuth()
+  const [scrolled, setScrolled]   = useState(false)
+  const [menuOpen, setMenuOpen]   = useState(false)
+  const [cartOpen, setCartOpen]   = useState(false)
+  const { itemCount }             = useCart()
+  const { customer, isLoggedIn }  = useCustomerAuth()
+
+  useEffect(() => {
+    const handler = () => setScrolled(window.scrollY > 10)
+    window.addEventListener('scroll', handler, { passive: true })
+    return () => window.removeEventListener('scroll', handler)
+  }, [])
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-cream border-b border-cream-dark shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <header
+        style={{
+          position: 'sticky', top: 0, zIndex: 50,
+          background: 'rgba(253,246,236,0.8)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+          borderBottom: '1px solid rgba(58,36,23,0.08)',
+          boxShadow: scrolled ? '0 6px 24px rgba(58,36,23,0.08)' : 'none',
+          transition: 'box-shadow 0.3s ease',
+        }}
+      >
+        <div
+          style={{ maxWidth: 1180, margin: '0 auto', padding: '14px 32px' }}
+          className="px-6 md:px-8 flex items-center justify-between"
+        >
           {/* Logo */}
-          <a href="#inicio" className="flex items-center gap-2 text-chocolate font-bold text-xl tracking-tight">
-            {logo_url
-              ? <img src={logo_url} alt={business_name} className="h-8 w-auto object-contain" />
-              : <span className="text-2xl">🍫</span>
-            }
-            <span>{business_name}</span>
+          <a href="#catalogo" className="flex items-center gap-2.5 no-underline">
+            <img
+              src="/brand/logo-icon.png"
+              alt="Dulceras Team"
+              style={{ height: 38, width: 'auto', display: 'block', flexShrink: 0 }}
+            />
+            <img
+              src="/brand/logo-wordmark.png"
+              alt="Dulceras Team"
+              className="hidden sm:block"
+              style={{ height: 52, width: 'auto', display: 'block' }}
+            />
           </a>
 
           {/* Nav desktop */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-mocha">
-            <a href="#catalogo" className="hover:text-chocolate transition-colors">Catálogo</a>
-            <a href="#como-pedir" className="hover:text-chocolate transition-colors">Cómo pedir</a>
-            <a href="#nosotros" className="hover:text-chocolate transition-colors">Nuestra historia</a>
+          <nav className="hidden md:flex items-center gap-9">
+            {NAV_LINKS.map(l => (
+              <a
+                key={l.href}
+                href={l.href}
+                className="nav-underline text-sm font-medium no-underline"
+                style={{ color: '#5A3B29' }}
+              >
+                {l.label}
+              </a>
+            ))}
           </nav>
 
-          {/* Acciones derecha */}
-          <div className="flex items-center gap-3">
-            {isLoggedIn ? (
-              <Link
-                to="/cuenta/pedidos"
-                className="hidden md:flex items-center gap-1.5 text-sm text-mocha hover:text-chocolate transition-colors font-medium"
+          {/* Actions desktop */}
+          <div className="hidden md:flex items-center gap-4">
+            <DockRow>
+              {/* Mi cuenta */}
+              <DockIcon
+                label={isLoggedIn ? (customer?.name.split(' ')[0] ?? 'Mi cuenta') : 'Mi cuenta'}
+                onClick={() => {}}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                {customer?.name.split(' ')[0]}
-              </Link>
-            ) : (
-              <Link
-                to="/cuenta/login"
-                className="hidden md:flex items-center gap-1.5 text-sm text-mocha hover:text-chocolate transition-colors font-medium"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Mi cuenta
-              </Link>
-            )}
-            {/* carrito */}
+                <Link
+                  to={isLoggedIn ? '/cuenta/pedidos' : '/cuenta/login'}
+                  className="flex items-center justify-center w-full h-full no-underline"
+                  style={{ color: 'inherit' }}
+                >
+                  <User size={18} />
+                </Link>
+              </DockIcon>
+
+              {/* Carrito */}
+              <DockIcon label={`Carrito${itemCount > 0 ? ` (${itemCount})` : ''}`} onClick={() => setCartOpen(true)}>
+                <div className="relative flex items-center justify-center">
+                  <ShoppingCart size={18} />
+                  {itemCount > 0 && (
+                    <span
+                      className="absolute -top-2 -right-2 flex items-center justify-center text-white font-bold rounded-full leading-none"
+                      style={{
+                        background: '#E285AF',
+                        fontSize: 9, minWidth: 16, minHeight: 16, padding: '1px 4px',
+                      }}
+                    >
+                      {itemCount}
+                    </span>
+                  )}
+                </div>
+              </DockIcon>
+            </DockRow>
+
+            <a
+              href="#catalogo"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-white no-underline"
+              style={{
+                background: 'linear-gradient(135deg, #F0A0C4, #E285AF)',
+                padding: '10px 22px', borderRadius: 100,
+                boxShadow: '0 6px 18px rgba(226,133,175,0.45)',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = '0 10px 22px rgba(226,133,175,0.55)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = ''
+                e.currentTarget.style.boxShadow = '0 6px 18px rgba(226,133,175,0.45)'
+              }}
+            >
+              Hacer pedido
+            </a>
+          </div>
+
+          {/* Mobile: cart + hamburger */}
+          <div className="md:hidden flex items-center gap-2">
             <button
               onClick={() => setCartOpen(true)}
-              className="relative p-2 text-mocha hover:text-chocolate transition-colors"
+              className="relative p-2"
+              style={{ color: '#3A2417', background: 'none', border: 'none', cursor: 'pointer' }}
               aria-label="Ver carrito"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
+              <ShoppingCart size={22} />
               {itemCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-rose text-white text-[10px] font-bold min-w-[18px] min-h-[18px] px-1 rounded-full flex items-center justify-center leading-none">
+                <span
+                  className="absolute -top-0.5 -right-0.5 flex items-center justify-center text-white font-bold rounded-full leading-none"
+                  style={{ background: '#E285AF', fontSize: 9, minWidth: 16, minHeight: 16, padding: '1px 4px' }}
+                >
                   {itemCount}
                 </span>
               )}
             </button>
-
-            <a
-              href="#catalogo"
-              className="hidden md:inline-flex items-center gap-2 bg-rose hover:opacity-90 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-opacity shadow-sm"
-            >
-              Hacer pedido
-            </a>
-
             <button
-              className="md:hidden text-chocolate p-1"
-              onClick={() => setMenuOpen(!menuOpen)}
-              aria-label="Menú"
+              onClick={() => setMenuOpen(v => !v)}
+              style={{ color: '#3A2417', background: 'none', border: 'none', cursor: 'pointer', padding: 6 }}
+              aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {menuOpen
-                  ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                }
-              </svg>
+              {menuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
         </div>
 
+        {/* Mobile menu */}
         {menuOpen && (
-          <div className="md:hidden bg-cream border-t border-cream-dark px-4 py-4 flex flex-col gap-4 text-mocha font-medium text-sm">
-            <a href="#catalogo" onClick={() => setMenuOpen(false)}>Catálogo</a>
-            <a href="#como-pedir" onClick={() => setMenuOpen(false)}>Cómo pedir</a>
-            <a href="#nosotros" onClick={() => setMenuOpen(false)}>Nuestra historia</a>
-            <Link to={isLoggedIn ? '/cuenta/pedidos' : '/cuenta/login'} onClick={() => setMenuOpen(false)}>
+          <nav
+            className="md:hidden px-6 py-5 flex flex-col gap-4 border-t"
+            style={{ borderColor: 'rgba(58,36,23,0.08)', background: 'rgba(253,246,236,0.97)' }}
+          >
+            {NAV_LINKS.map(l => (
+              <a
+                key={l.href}
+                href={l.href}
+                className="text-sm font-medium no-underline"
+                style={{ color: '#5A3B29' }}
+                onClick={() => setMenuOpen(false)}
+              >
+                {l.label}
+              </a>
+            ))}
+            <Link
+              to={isLoggedIn ? '/cuenta/pedidos' : '/cuenta/login'}
+              className="text-sm font-medium no-underline"
+              style={{ color: '#5A3B29' }}
+              onClick={() => setMenuOpen(false)}
+            >
               {isLoggedIn ? `Mi cuenta (${customer?.name.split(' ')[0]})` : 'Mi cuenta'}
             </Link>
             <a
               href="#catalogo"
+              className="text-center text-sm font-semibold text-white py-3 rounded-full no-underline"
+              style={{ background: 'linear-gradient(135deg, #F0A0C4, #E285AF)' }}
               onClick={() => setMenuOpen(false)}
-              className="bg-rose text-white px-4 py-2 rounded-full text-center font-semibold"
             >
               Hacer pedido
             </a>
-          </div>
+          </nav>
         )}
       </header>
 
