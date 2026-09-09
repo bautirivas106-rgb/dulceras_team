@@ -177,15 +177,20 @@ class OrderCreateSerializer(serializers.Serializer):
     def create(self, validated_data):
         tenant = self.context['tenant']
 
-        # Cliente: get_or_create por teléfono
-        customer, _ = Customer.objects.get_or_create(
-            tenant=tenant,
-            phone=validated_data['customer_phone'],
-            defaults={
-                'name': validated_data['customer_name'],
-                'email': validated_data.get('customer_email', ''),
-            },
+        # Cliente: buscar por teléfono (puede haber duplicados) o crear
+        customer = (
+            Customer.objects
+            .filter(tenant=tenant, phone=validated_data['customer_phone'])
+            .order_by('id')
+            .first()
         )
+        if customer is None:
+            customer = Customer.objects.create(
+                tenant=tenant,
+                phone=validated_data['customer_phone'],
+                name=validated_data['customer_name'],
+                email=validated_data.get('customer_email', ''),
+            )
 
         # Zona y dirección si es delivery
         delivery_address = None

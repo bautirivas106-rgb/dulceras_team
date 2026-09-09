@@ -18,10 +18,10 @@ def get_mp_sdk(tenant=None):
 
 def build_mp_preference(payment_intent, tenant_slug, frontend_url, notification_url):
     order = payment_intent.order
-    return {
+    pref = {
         "items": [
             {
-                "title": f"Seña - Pedido #{order.id}",
+                "title": f"Sena - Pedido #{order.id}",
                 "quantity": 1,
                 "unit_price": float(payment_intent.amount),
                 "currency_id": "ARS",
@@ -33,5 +33,9 @@ def build_mp_preference(payment_intent, tenant_slug, frontend_url, notification_
             "pending": f"{frontend_url}/payment/pending/?order_id={order.id}",
         },
         "external_reference": str(payment_intent.id),
-        "notification_url": notification_url,
     }
+    # Solo incluir notification_url si es una URL pública (no localhost)
+    _local = ('localhost', '127.0.0.1', '0.0.0.0')
+    if notification_url and not any(h in notification_url for h in _local):
+        pref["notification_url"] = notification_url
+    return pref

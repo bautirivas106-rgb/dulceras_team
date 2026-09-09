@@ -172,10 +172,23 @@ export default function CheckoutPage() {
       clear()
       navigate(`/pedido/${order.id}`, { state: { order } })
     } catch (err: unknown) {
-      const apiErrors = (err as { response?: { data?: Record<string, string[]> } })?.response?.data
+      const apiErrors = (err as { response?: { data?: Record<string, unknown> } })?.response?.data
       if (apiErrors) {
+        const knownFields = new Set(['customer_name', 'customer_phone', 'customer_email', 'required_date', 'delivery_zone_id', 'address_street', 'address_neighborhood', 'notes'])
         const mapped: Record<string, string> = {}
-        for (const [k, v] of Object.entries(apiErrors)) mapped[k] = Array.isArray(v) ? v[0] : String(v)
+        for (const [k, v] of Object.entries(apiErrors)) {
+          const msg = Array.isArray(v) ? String(v[0]) : String(v)
+          if (k === 'non_field_errors' || k === 'detail') {
+            mapped._global = msg
+          } else if (knownFields.has(k)) {
+            mapped[k] = msg
+          } else if (!mapped._global) {
+            mapped._global = msg
+          }
+        }
+        if (Object.keys(mapped).length === 0) {
+          mapped._global = 'Ocurrió un error al procesar el pedido. Intentá de nuevo.'
+        }
         setErrors(mapped)
       } else {
         setErrors({ _global: 'Ocurrió un error. Intentá de nuevo.' })
