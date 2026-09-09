@@ -53,3 +53,20 @@ export const getCustomerOrders = () =>
   customerClient.get(
     `/api/public/${TENANT}/customers/me/orders/`
   ).then(r => r.data)
+
+export interface Review {
+  id: number
+  author_name: string
+  rating: number
+  text: string
+  created_at: string
+}
+
+export const getReviews = () =>
+  client.get<Review[]>(`/api/public/${TENANT}/reviews/`).then(r => r.data)
+
+export const submitReview = (data: { rating: number; text: string }) =>
+  customerClient.post<Review>(
+    `/api/public/${TENANT}/customers/me/reviews/`,
+    data
+  ).then(r => r.data)

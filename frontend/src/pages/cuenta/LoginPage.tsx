@@ -8,7 +8,7 @@ export default function CustomerLoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useCustomerAuth()
-  const from = (location.state as { from?: string })?.from || '/cuenta/pedidos'
+  const from = (location.state as { from?: string })?.from || '/'
 
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')

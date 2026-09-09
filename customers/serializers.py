@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Customer, CustomerAddress
+from .models import Customer, CustomerAddress, Review
 
 
 class CustomerPublicRegisterSerializer(serializers.Serializer):
@@ -60,3 +60,14 @@ class CustomerWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = ('name', 'phone', 'email', 'notes')
+
+
+class ReviewPublicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ('id', 'author_name', 'rating', 'text', 'created_at')
+
+
+class ReviewCreateSerializer(serializers.Serializer):
+    rating = serializers.IntegerField(min_value=1, max_value=5)
+    text = serializers.CharField(min_length=5, max_length=1000)

@@ -43,7 +43,7 @@ export default function Header() {
           className="px-6 md:px-8 flex items-center justify-between"
         >
           {/* Logo */}
-          <a href="#catalogo" className="flex items-center gap-2.5 no-underline">
+          <Link to="/" className="flex items-center gap-2.5 no-underline">
             <img
               src="/brand/logo-icon.png"
               alt="Dulceras Team"
@@ -55,7 +55,7 @@ export default function Header() {
               className="hidden sm:block"
               style={{ height: 52, width: 'auto', display: 'block' }}
             />
-          </a>
+          </Link>
 
           {/* Nav desktop */}
           <nav className="hidden md:flex items-center gap-9">

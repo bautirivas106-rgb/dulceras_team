@@ -23,6 +23,25 @@ class Customer(TenantModel):
         return self.name
 
 
+class Review(TenantModel):
+    customer = models.ForeignKey(
+        Customer, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='reviews',
+    )
+    author_name = models.CharField(max_length=200)
+    rating = models.PositiveSmallIntegerField(default=5)
+    text = models.TextField()
+    is_approved = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Reseña'
+        verbose_name_plural = 'Reseñas'
+
+    def __str__(self):
+        return f"{self.author_name} ({self.rating}★)"
+
+
 class CustomerAddress(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='addresses')
     street = models.CharField(max_length=300)

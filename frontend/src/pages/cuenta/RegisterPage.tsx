@@ -33,7 +33,7 @@ export default function CustomerRegisterPage() {
         name: form.name, phone: form.phone, email: form.email, password: form.password,
       })
       login(result.tokens, result.customer)
-      navigate('/cuenta/pedidos', { replace: true })
+      navigate('/', { replace: true })
     } catch (err: unknown) {
       const data = (err as { response?: { data?: Record<string, string[]> } })?.response?.data
       if (data) {

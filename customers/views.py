@@ -2,6 +2,7 @@ from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,12 +11,13 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from catalog.views import TenantFilterMixin
 from tenants.models import Tenant
 from users.models import User
-from .models import Customer, CustomerAddress
+from .models import Customer, CustomerAddress, Review
 from .serializers import (
     CustomerListSerializer, CustomerDetailSerializer, CustomerWriteSerializer,
     CustomerAddressSerializer, CustomerAddressWriteSerializer,
     CustomerPublicRegisterSerializer, CustomerPublicProfileSerializer,
     CustomerPublicProfileUpdateSerializer,
+    ReviewPublicSerializer, ReviewCreateSerializer,
 )
 
 
@@ -155,6 +157,43 @@ class CustomerOrdersView(APIView):
             .order_by('-created_at')
         )
         return Response(OrderListSerializer(orders, many=True).data)
+
+
+class ReviewListView(ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = ReviewPublicSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        from catalog.views import get_active_tenant
+        tenant = get_active_tenant(self.kwargs['tenant_slug'])
+        return Review.objects.filter(tenant=tenant, is_approved=True)
+
+
+class CustomerReviewCreateView(APIView):
+    permission_classes = [IsCustomerUser]
+
+    def post(self, request, tenant_slug):
+        tenant = get_object_or_404(Tenant, slug=tenant_slug, is_active=True)
+        if request.user.tenant != tenant:
+            return Response({'detail': 'No autorizado.'}, status=403)
+
+        serializer = ReviewCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            customer = request.user.customer_profile
+        except Customer.DoesNotExist:
+            return Response({'detail': 'Sin perfil de cliente.'}, status=400)
+
+        review = Review.objects.create(
+            tenant=tenant,
+            customer=customer,
+            author_name=customer.name,
+            rating=serializer.validated_data['rating'],
+            text=serializer.validated_data['text'],
+        )
+        return Response(ReviewPublicSerializer(review).data, status=status.HTTP_201_CREATED)
 
 
 class AdminCustomerViewSet(TenantFilterMixin, viewsets.ModelViewSet):
