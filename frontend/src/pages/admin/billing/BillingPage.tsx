@@ -64,7 +64,6 @@ export default function BillingPage() {
   }
 
   const isPaid = Number(sub.plan_price) === 0
-  const needsPayment = sub.status === 'overdue' || (sub.status === 'trial' && (sub.days_remaining ?? 0) <= 0)
   const periodEnd = sub.status === 'active' ? sub.current_period_end : sub.trial_ends_at
 
   return (

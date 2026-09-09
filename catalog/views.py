@@ -1,7 +1,14 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
 from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
+
+
+class AdminCatalogPagination(PageNumberPagination):
+    page_size = 500
+    max_page_size = 1000
+    page_size_query_param = 'page_size'
 
 from tenants.models import Tenant
 from .models import Category, Product, ProductVariant
@@ -93,6 +100,7 @@ class AdminCategoryViewSet(TenantFilterMixin, viewsets.ModelViewSet):
     queryset = Category.objects.all().order_by('name')
     serializer_class = CategoryAdminSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = AdminCatalogPagination
 
 
 class AdminProductViewSet(TenantFilterMixin, viewsets.ModelViewSet):
@@ -104,6 +112,7 @@ class AdminProductViewSet(TenantFilterMixin, viewsets.ModelViewSet):
     )
     serializer_class = ProductAdminSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = AdminCatalogPagination
 
     def perform_create(self, serializer):
         tenant = self.get_tenant() or get_object_or_404(

@@ -5,6 +5,7 @@ import { CustomerAuthProvider } from './context/CustomerAuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 
 import LandingPage from './pages/landing/LandingPage'
+import PublicCatalogPage from './pages/catalog/CatalogPage'
 import CheckoutPage from './pages/checkout/CheckoutPage'
 import OrderConfirmation from './pages/checkout/OrderConfirmation'
 import PaymentSuccess from './pages/payment/PaymentSuccess'
@@ -43,6 +44,7 @@ export default function App() {
           <Routes>
             {/* Public */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/catalogo" element={<PublicCatalogPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/pedido/:id" element={<OrderConfirmation />} />
             <Route path="/payment/success/" element={<PaymentSuccess />} />
@@ -58,11 +60,11 @@ export default function App() {
             <Route path="/cuenta/registro" element={<CustomerRegisterPage />} />
             <Route path="/cuenta/pedidos" element={<CustomerOrdersPage />} />
 
-            {/* Admin protected */}
+            {/* Admin protected (tenant_admin y staff) */}
             <Route
               path="/admin"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute excludeRole="platform_owner">
                   <AdminLayout />
                 </ProtectedRoute>
               }
@@ -80,11 +82,11 @@ export default function App() {
               <Route path="coupons" element={<CouponsPage />} />
             </Route>
 
-            {/* Superadmin protected */}
+            {/* Superadmin protected (platform_owner only) */}
             <Route
               path="/superadmin"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="platform_owner">
                   <SuperadminLayout />
                 </ProtectedRoute>
               }

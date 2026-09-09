@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, include
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
+from users.views import CustomTokenObtainPairView
 
 from tenants.urls import public_urlpatterns as tenants_public, admin_urlpatterns as tenants_admin, superadmin_urlpatterns, register_urlpatterns
 from catalog.urls import public_urlpatterns as catalog_public, admin_urlpatterns as catalog_admin
@@ -18,7 +19,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # JWT auth
-    path('api/token/', TokenObtainPairView.as_view(), name='token-obtain'),
+    path('api/token/', CustomTokenObtainPairView.as_view(), name='token-obtain'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
 
     # Public API (no auth)

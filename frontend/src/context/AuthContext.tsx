@@ -3,6 +3,8 @@ import axios from 'axios'
 
 interface AuthUser {
   username: string
+  role: string
+  tenant_id: number | null
 }
 
 interface AuthContextType {
@@ -14,12 +16,29 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  try {
+    const payload = token.split('.')[1]
+    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))
+  } catch {
+    return {}
+  }
+}
+
+function userFromStorage(): AuthUser | null {
+  const token = localStorage.getItem('access_token')
+  const username = localStorage.getItem('username')
+  if (!token || !username) return null
+  const payload = decodeJwtPayload(token)
+  return {
+    username,
+    role: (payload.role as string) ?? '',
+    tenant_id: (payload.tenant_id as number | null) ?? null,
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    const username = localStorage.getItem('username')
-    const token = localStorage.getItem('access_token')
-    return username && token ? { username } : null
-  })
+  const [user, setUser] = useState<AuthUser | null>(userFromStorage)
 
   const logout = useCallback(() => {
     localStorage.removeItem('access_token')
@@ -33,10 +52,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('access_token', data.access)
     localStorage.setItem('refresh_token', data.refresh)
     localStorage.setItem('username', username)
-    setUser({ username })
+    const payload = decodeJwtPayload(data.access)
+    setUser({
+      username,
+      role: (payload.role as string) ?? '',
+      tenant_id: (payload.tenant_id as number | null) ?? null,
+    })
   }, [])
 
-  // Clear stale state if tokens are gone (e.g. manual localStorage clear)
   useEffect(() => {
     if (!localStorage.getItem('access_token')) setUser(null)
   }, [])

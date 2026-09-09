@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { getPublicPlans, registerTenant, type PublicPlan, type RegisterPayload } from '../../api/registerApi'
 
 const STEPS = ['Elegí un plan', 'Tu negocio', 'Tu cuenta'] as const
@@ -310,7 +310,6 @@ function SuccessScreen({ result }: { result: { tenant_name: string; admin_userna
 }
 
 export default function RegisterPage() {
-  const navigate = useNavigate()
   const [step, setStep] = useState(0)
   const [plans, setPlans] = useState<PublicPlan[]>([])
   const [selectedPlan, setSelectedPlan] = useState<number | null>(null)

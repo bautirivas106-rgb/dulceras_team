@@ -47,6 +47,7 @@ export default function ProductModal({ product, categories, onClose, onSaved }: 
   const [advanceHours, setAdvanceHours] = useState(product?.requires_advance_hours ?? 48)
   const [sortOrder, setSortOrder] = useState(product?.sort_order ?? 0)
   const [isActive, setIsActive] = useState(product?.is_active ?? true)
+  const [madeToOrder, setMadeToOrder] = useState(product?.made_to_order ?? true)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -111,13 +112,15 @@ export default function ProductModal({ product, categories, onClose, onSaved }: 
           fd.append('requires_advance_hours', String(advanceHours))
           fd.append('sort_order', String(sortOrder))
           fd.append('is_active', String(isActive))
+          fd.append('made_to_order', String(madeToOrder))
           fd.append('image', imageFile)
           const { data } = await updateProduct(product.id, fd)
           savedProduct = data
         } else {
           const { data } = await updateProduct(product.id, {
             name, description, category: Number(categoryId),
-            requires_advance_hours: advanceHours, sort_order: sortOrder, is_active: isActive,
+            requires_advance_hours: advanceHours, sort_order: sortOrder,
+            is_active: isActive, made_to_order: madeToOrder,
           })
           savedProduct = data
         }
@@ -129,6 +132,7 @@ export default function ProductModal({ product, categories, onClose, onSaved }: 
         fd.append('requires_advance_hours', String(advanceHours))
         fd.append('sort_order', String(sortOrder))
         fd.append('is_active', String(isActive))
+        fd.append('made_to_order', String(madeToOrder))
         if (imageFile) fd.append('image', imageFile)
         const { data } = await createProduct(fd)
         savedProduct = data
@@ -256,11 +260,21 @@ export default function ProductModal({ product, categories, onClose, onSaved }: 
             </div>
           </div>
 
-          <label className="flex items-center gap-2.5 cursor-pointer">
-            <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)}
-              className="w-4 h-4 rounded accent-[#E8889A]" />
-            <span className="text-sm text-gray-700">Activo (visible en la tienda)</span>
-          </label>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)}
+                className="w-4 h-4 rounded accent-[#E8889A]" />
+              <span className="text-sm text-gray-700">Activo (visible en la tienda)</span>
+            </label>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input type="checkbox" checked={madeToOrder} onChange={(e) => setMadeToOrder(e.target.checked)}
+                className="w-4 h-4 rounded accent-[#E8889A]" />
+              <span className="text-sm text-gray-700">
+                Fabricado bajo pedido
+                <span className="ml-1 text-xs text-gray-400">(no requiere stock — marcalo siempre para productos artesanales)</span>
+              </span>
+            </label>
+          </div>
 
           {/* Variants */}
           <div>
