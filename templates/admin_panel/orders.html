@@ -1,0 +1,113 @@
+{% extends "admin_panel/base.html" %}
+{% block title %}Pedidos — Panel{% endblock %}
+{% block nav_orders %}active{% endblock %}
+{% block page_title %}Pedidos{% endblock %}
+
+{% block page_content %}
+<div x-data="{
+  orders: [], loading: true, search: '', statusFilter: '',
+  page: 1, pageSize: 20, totalCount: 0,
+  get totalPages() { return Math.ceil(this.totalCount / this.pageSize) },
+
+  async load() {
+    this.loading = true
+    const params = new URLSearchParams({ page: this.page, page_size: this.pageSize })
+    if (this.search) params.set('search', this.search)
+    if (this.statusFilter) params.set('status', this.statusFilter)
+    try {
+      const res = await fetch('/api/admin/orders/orders/?' + params, { headers: $store.adminAuth.headers() })
+      if (res.ok) {
+        const d = await res.json()
+        if (Array.isArray(d)) { this.orders = d; this.totalCount = d.length }
+        else { this.orders = d.results ?? []; this.totalCount = d.count ?? 0 }
+      }
+    } catch {}
+    this.loading = false
+  },
+
+  statusLabel(s) {
+    const M = { pending_deposit:'Esperando seña', deposit_paid:'Seña pagada', in_progress:'En preparación', ready:'Listo', delivered:'Entregado', cancelled:'Cancelado' }
+    return M[s] || s
+  },
+  statusClass(s) {
+    if (s==='cancelled') return 'badge badge-red'
+    if (s==='delivered') return 'badge badge-green'
+    if (s==='ready') return 'badge badge-blue'
+    return 'badge badge-pink'
+  },
+  fmt(n) { return Number(n||0).toLocaleString('es-AR') },
+}"
+x-init="load()">
+
+  <!-- Filters -->
+  <div class="flex flex-wrap gap-3 mb-4">
+    <input type="search" x-model="search" @input.debounce.400ms="page=1; load()"
+           placeholder="Buscar por cliente..."
+           class="rounded-xl px-4 py-2 text-sm outline-none"
+           style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff;min-width:200px"
+           onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+    <select x-model="statusFilter" @change="page=1; load()"
+            class="rounded-xl px-4 py-2 text-sm outline-none"
+            style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff">
+      <option value="">Todos los estados</option>
+      <option value="pending_deposit">Esperando seña</option>
+      <option value="deposit_paid">Seña pagada</option>
+      <option value="in_progress">En preparación</option>
+      <option value="ready">Listo</option>
+      <option value="delivered">Entregado</option>
+      <option value="cancelled">Cancelado</option>
+    </select>
+  </div>
+
+  <!-- Table card -->
+  <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05)">
+    <div x-show="loading" class="flex justify-center py-16">
+      <div style="width:36px;height:36px;border:2px solid #EFE2CB;border-top-color:#E285AF;border-radius:50%;animation:spin 1s linear infinite"></div>
+    </div>
+
+    <table class="data-table" x-show="!loading">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Cliente</th>
+          <th>Fecha pedido</th>
+          <th>Fecha entrega</th>
+          <th>Total</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="o in orders" :key="o.id">
+          <tr>
+            <td class="font-semibold text-brown" x-text="'#' + o.id"></td>
+            <td x-text="o.customer_name ?? o.customer?.name ?? '—'"></td>
+            <td x-text="o.created_at ? o.created_at.split('T')[0] : '—'"></td>
+            <td x-text="o.required_date ?? '—'"></td>
+            <td x-text="'$' + fmt(o.total)"></td>
+            <td><span :class="statusClass(o.status)" x-text="statusLabel(o.status)"></span></td>
+            <td><a :href="'/admin/orders/' + o.id + '/'" class="text-xs font-semibold text-pink-deep no-underline hover:underline">Ver →</a></td>
+          </tr>
+        </template>
+        <tr x-show="!loading && orders.length === 0">
+          <td colspan="7" class="text-center py-10 text-brown-soft">No hay pedidos.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Pagination -->
+    <div x-show="totalPages > 1" class="flex items-center justify-between px-5 py-3" style="border-top:1px solid rgba(58,36,23,0.07)">
+      <span class="text-xs text-brown-soft" x-text="totalCount + ' pedidos'"></span>
+      <div class="flex gap-2">
+        <button @click="page = Math.max(1, page-1); load()" :disabled="page <= 1"
+                class="text-xs px-3 py-1.5 rounded-lg disabled:opacity-40"
+                style="background:#F6EAD6;color:#5A3B29;border:none;cursor:pointer">Anterior</button>
+        <span class="text-xs py-1.5 px-2 text-brown-soft" x-text="page + ' / ' + totalPages"></span>
+        <button @click="page = Math.min(totalPages, page+1); load()" :disabled="page >= totalPages"
+                class="text-xs px-3 py-1.5 rounded-lg disabled:opacity-40"
+                style="background:#F6EAD6;color:#5A3B29;border:none;cursor:pointer">Siguiente</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

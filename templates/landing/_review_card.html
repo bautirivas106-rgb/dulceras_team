@@ -1,0 +1,15 @@
+<div class="flex-none bg-white rounded-2xl" style="width:320px;padding:22px 24px;border-top:3px solid #E285AF;box-shadow:0 8px 24px rgba(58,36,23,0.07)">
+  <div class="flex items-center gap-3" style="margin-bottom:14px">
+    <div class="flex-shrink-0 flex items-center justify-center font-semibold text-white rounded-full font-fraunces"
+         style="width:44px;height:44px;background:linear-gradient(135deg,#F0A0C4,#E285AF);font-size:1rem">
+      {{ review.author_name|first|upper }}
+    </div>
+    <div class="flex-1 min-w-0">
+      <p class="font-semibold text-brown text-sm leading-tight">{{ review.author_name }}</p>
+    </div>
+    <div class="flex gap-0.5" style="color:#E285AF;font-size:0.85rem">
+      {% for i in "12345"|make_list %}{% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}{% endfor %}
+    </div>
+  </div>
+  <p class="text-brown-soft" style="font-size:0.88rem;line-height:1.55">"{{ review.text }}"</p>
+</div>

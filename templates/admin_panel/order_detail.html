@@ -1,0 +1,153 @@
+{% extends "admin_panel/base.html" %}
+{% block title %}Pedido #{{ order_id }} — Panel{% endblock %}
+{% block nav_orders %}active{% endblock %}
+{% block page_title %}<a href="/admin/orders/" class="text-brown-soft font-normal no-underline hover:underline text-sm">Pedidos</a> / Pedido #{{ order_id }}{% endblock %}
+
+{% block page_content %}
+<div x-data="{
+  order: null,
+  loading: true,
+  statusLoading: false,
+  newStatus: '',
+
+  STATUS_LABELS: {
+    pending_deposit: 'Esperando seña',
+    deposit_paid: 'Seña pagada',
+    in_progress: 'En preparación',
+    ready: 'Listo para retirar',
+    delivered: 'Entregado',
+    cancelled: 'Cancelado',
+  },
+
+  async init() {
+    try {
+      const res = await fetch('/api/admin/orders/orders/{{ order_id }}/', { headers: $store.adminAuth.headers() })
+      if (res.ok) this.order = await res.json()
+    } catch {}
+    this.loading = false
+  },
+
+  async updateStatus() {
+    if (!this.newStatus || this.newStatus === this.order?.status) return
+    this.statusLoading = true
+    try {
+      const res = await fetch('/api/admin/orders/orders/{{ order_id }}/', {
+        method: 'PATCH',
+        headers: $store.adminAuth.headers(),
+        body: JSON.stringify({ status: this.newStatus })
+      })
+      if (res.ok) { this.order = await res.json(); this.newStatus = '' }
+    } catch {}
+    this.statusLoading = false
+  },
+
+  fmt(n) { return Number(n||0).toLocaleString('es-AR') },
+}">
+
+  <div x-show="loading" class="flex justify-center py-16">
+    <div style="width:36px;height:36px;border:2px solid #EFE2CB;border-top-color:#E285AF;border-radius:50%;animation:spin 1s linear infinite"></div>
+  </div>
+
+  <div x-show="!loading && order" class="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+    <!-- Left: order info -->
+    <div class="md:col-span-2 space-y-4">
+      <!-- Items card -->
+      <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05);padding:20px 22px">
+        <h2 class="font-fraunces font-bold text-brown mb-4" style="font-size:1rem">Productos</h2>
+        <template x-for="item in (order?.items ?? [])" :key="item.id">
+          <div class="flex justify-between items-start text-sm mb-3">
+            <div>
+              <p class="font-medium text-brown" x-text="item.product_name"></p>
+              <p class="text-brown-soft text-xs mt-0.5" x-text="item.variant_name + ' × ' + item.quantity"></p>
+            </div>
+            <span class="font-semibold text-brown" x-text="'$' + fmt(item.subtotal)"></span>
+          </div>
+        </template>
+
+        <div class="mt-4 pt-4" style="border-top:1px solid rgba(58,36,23,0.07)">
+          <div class="flex justify-between text-sm text-brown-soft mb-1">
+            <span>Subtotal</span><span x-text="'$' + fmt(order?.subtotal)"></span>
+          </div>
+          <div x-show="order?.delivery_cost > 0" class="flex justify-between text-sm text-brown-soft mb-1">
+            <span>Delivery</span><span x-text="'$' + fmt(order?.delivery_cost)"></span>
+          </div>
+          <div x-show="order?.discount_amount > 0" class="flex justify-between text-sm font-semibold mb-1" style="color:#27AE60">
+            <span>Descuento</span><span x-text="'−$' + fmt(order?.discount_amount)"></span>
+          </div>
+          <div class="flex justify-between font-bold text-brown">
+            <span>Total</span><span x-text="'$' + fmt(order?.total)"></span>
+          </div>
+          <div class="flex justify-between text-sm font-semibold mt-2" style="color:#E285AF">
+            <span>Seña (<span x-text="order?.deposit_percentage + '%'"></span>)</span>
+            <span x-text="'$' + fmt(order?.deposit_amount)"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delivery info -->
+      <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05);padding:20px 22px">
+        <h2 class="font-fraunces font-bold text-brown mb-3" style="font-size:1rem">Entrega</h2>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p class="text-xs text-brown-soft uppercase tracking-wide mb-0.5">Método</p>
+            <p class="font-medium text-brown" x-text="order?.delivery_method === 'delivery' ? 'Delivery' : 'Retiro en local'"></p>
+          </div>
+          <div>
+            <p class="text-xs text-brown-soft uppercase tracking-wide mb-0.5">Fecha</p>
+            <p class="font-medium text-brown" x-text="order?.required_date ?? '—'"></p>
+          </div>
+          <div x-show="order?.address_street">
+            <p class="text-xs text-brown-soft uppercase tracking-wide mb-0.5">Dirección</p>
+            <p class="font-medium text-brown" x-text="order?.address_street"></p>
+          </div>
+          <div x-show="order?.notes">
+            <p class="text-xs text-brown-soft uppercase tracking-wide mb-0.5">Notas</p>
+            <p class="font-medium text-brown" x-text="order?.notes"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: customer + status -->
+    <div class="space-y-4">
+      <!-- Customer -->
+      <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05);padding:20px 22px">
+        <h2 class="font-fraunces font-bold text-brown mb-3" style="font-size:1rem">Cliente</h2>
+        <p class="font-semibold text-brown text-sm" x-text="order?.customer_name ?? order?.customer?.name ?? '—'"></p>
+        <p class="text-brown-soft text-sm mt-1" x-text="order?.customer_phone ?? order?.customer?.phone ?? '—'"></p>
+        <p class="text-brown-soft text-sm" x-text="order?.customer_email ?? order?.customer?.email ?? ''"></p>
+        <a :href="'https://wa.me/549' + (order?.customer_phone ?? '').replace(/\D/g,'')"
+           target="_blank" rel="noopener noreferrer"
+           class="inline-flex items-center gap-1.5 text-xs font-semibold mt-3 no-underline"
+           style="color:#25D366">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Contactar por WhatsApp
+        </a>
+      </div>
+
+      <!-- Status -->
+      <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05);padding:20px 22px">
+        <h2 class="font-fraunces font-bold text-brown mb-3" style="font-size:1rem">Estado</h2>
+        <p class="text-sm text-brown-soft mb-2">Estado actual:</p>
+        <p class="font-semibold text-brown mb-4" x-text="STATUS_LABELS[order?.status] ?? order?.status"></p>
+
+        <select x-model="newStatus"
+                class="w-full rounded-xl text-sm outline-none mb-3"
+                style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff;padding:10px 14px">
+          <option value="">Cambiar estado...</option>
+          <template x-for="[val, label] in Object.entries(STATUS_LABELS)" :key="val">
+            <option :value="val" x-text="label"></option>
+          </template>
+        </select>
+
+        <button @click="updateStatus()" :disabled="!newStatus || statusLoading"
+                class="w-full text-sm font-semibold text-white rounded-xl py-2.5 disabled:opacity-50"
+                :style="!newStatus || statusLoading ? 'background:rgba(226,133,175,0.6);border:none;cursor:not-allowed' : 'background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none;cursor:pointer'"
+                x-text="statusLoading ? 'Guardando...' : 'Actualizar estado'">
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

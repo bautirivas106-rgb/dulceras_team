@@ -1,0 +1,99 @@
+{% extends "admin_panel/base.html" %}
+{% block title %}Dashboard — Panel{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block page_content %}
+<div x-data="{
+  stats: null,
+  orders: [],
+  loading: true,
+  async init() {
+    try {
+      const [statsRes, ordersRes] = await Promise.all([
+        fetch('/api/admin/dashboard/stats/', { headers: $store.adminAuth.headers() }),
+        fetch('/api/admin/orders/orders/?page_size=5', { headers: $store.adminAuth.headers() }),
+      ])
+      if (statsRes.ok) this.stats = await statsRes.json()
+      if (ordersRes.ok) {
+        const d = await ordersRes.json()
+        this.orders = Array.isArray(d) ? d.slice(0,5) : (d.results ?? []).slice(0,5)
+      }
+    } catch {}
+    this.loading = false
+  },
+  statusLabel(s) {
+    const M = { pending_deposit:'Esperando seña', deposit_paid:'Seña pagada', in_progress:'En prep.', ready:'Listo', delivered:'Entregado', cancelled:'Cancelado' }
+    return M[s] || s
+  },
+  statusClass(s) {
+    if (s==='cancelled') return 'badge badge-red'
+    if (s==='delivered') return 'badge badge-green'
+    if (s==='ready') return 'badge badge-blue'
+    return 'badge badge-pink'
+  },
+  fmt(n) { return Number(n||0).toLocaleString('es-AR') }
+}">
+
+  <!-- Stats cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="stat-card">
+      <p class="text-xs font-semibold uppercase tracking-wide text-brown-soft mb-1">Pedidos hoy</p>
+      <p class="font-fraunces font-bold text-brown" style="font-size:1.8rem" x-text="loading ? '—' : (stats?.orders_today ?? 0)"></p>
+    </div>
+    <div class="stat-card">
+      <p class="text-xs font-semibold uppercase tracking-wide text-brown-soft mb-1">Pedidos este mes</p>
+      <p class="font-fraunces font-bold text-brown" style="font-size:1.8rem" x-text="loading ? '—' : (stats?.orders_month ?? 0)"></p>
+    </div>
+    <div class="stat-card">
+      <p class="text-xs font-semibold uppercase tracking-wide text-brown-soft mb-1">Ingresos este mes</p>
+      <p class="font-fraunces font-bold text-brown" style="font-size:1.8rem" x-text="loading ? '—' : '$' + fmt(stats?.revenue_month ?? 0)"></p>
+    </div>
+    <div class="stat-card">
+      <p class="text-xs font-semibold uppercase tracking-wide text-brown-soft mb-1">Clientes totales</p>
+      <p class="font-fraunces font-bold text-brown" style="font-size:1.8rem" x-text="loading ? '—' : (stats?.total_customers ?? 0)"></p>
+    </div>
+  </div>
+
+  <!-- Recent orders -->
+  <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05)">
+    <div class="flex items-center justify-between px-5 py-4" style="border-bottom:1px solid rgba(58,36,23,0.07)">
+      <h2 class="font-fraunces font-bold text-brown" style="font-size:1rem">Últimos pedidos</h2>
+      <a href="/admin/orders/" class="text-sm text-pink-deep no-underline hover:underline">Ver todos →</a>
+    </div>
+
+    <div x-show="loading" class="flex justify-center py-10">
+      <div style="width:32px;height:32px;border:2px solid #EFE2CB;border-top-color:#E285AF;border-radius:50%;animation:spin 1s linear infinite"></div>
+    </div>
+
+    <div x-show="!loading && orders.length === 0" class="text-center py-10 text-brown-soft text-sm">
+      No hay pedidos todavía.
+    </div>
+
+    <table class="data-table" x-show="!loading && orders.length > 0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Cliente</th>
+          <th>Fecha</th>
+          <th>Total</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="o in orders" :key="o.id">
+          <tr>
+            <td class="font-semibold" x-text="'#' + o.id"></td>
+            <td x-text="o.customer_name ?? o.customer?.name ?? '—'"></td>
+            <td x-text="o.required_date ?? '—'"></td>
+            <td x-text="'$' + fmt(o.total)"></td>
+            <td><span :class="statusClass(o.status)" x-text="statusLabel(o.status)"></span></td>
+            <td><a :href="'/admin/orders/' + o.id + '/'" class="text-xs text-pink-deep no-underline hover:underline">Ver →</a></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

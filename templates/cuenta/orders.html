@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Mis pedidos — Dulceras Team{% endblock %}
+
+{% block content %}
+<div class="min-h-screen font-poppins" style="background:#FDF6EC"
+     x-data="{
+       orders: [],
+       loading: true,
+       error: '',
+       editOpen: false,
+       editForm: { name: '', phone: '', email: '' },
+       editLoading: false,
+       editError: '',
+       editSuccess: '',
+
+       async init() {
+         if (!$store.customerAuth.isLoggedIn) {
+           window.location.href = '/cuenta/login/?next=/cuenta/pedidos/'
+           return
+         }
+         await this.loadOrders()
+       },
+
+       async loadOrders() {
+         this.loading = true
+         try {
+           const res = await fetch('/api/public/{{ tenant_slug }}/customers/orders/', {
+             headers: $store.customerAuth.headers()
+           })
+           if (res.status === 401) { $store.customerAuth.logout(); return }
+           const data = await res.json()
+           this.orders = Array.isArray(data) ? data : (data.results ?? [])
+         } catch {
+           this.error = 'No se pudieron cargar los pedidos.'
+         } finally {
+           this.loading = false
+         }
+       },
+
+       openEdit() {
+         const c = $store.customerAuth.customer
+         this.editForm = { name: c?.name ?? '', phone: c?.phone ?? '', email: c?.email ?? '' }
+         this.editError = ''
+         this.editSuccess = ''
+         this.editOpen = true
+       },
+
+       async saveEdit() {
+         this.editLoading = true
+         this.editError = ''
+         this.editSuccess = ''
+         try {
+           const res = await fetch('/api/public/{{ tenant_slug }}/customers/profile/', {
+             method: 'PATCH',
+             headers: $store.customerAuth.headers(),
+             body: JSON.stringify(this.editForm)
+           })
+           const data = await res.json()
+           if (!res.ok) throw new Error(Object.values(data).flat()[0] || 'Error al guardar.')
+           $store.customerAuth.setCustomer(data)
+           this.editSuccess = '¡Perfil actualizado!'
+           setTimeout(() => { this.editOpen = false }, 1200)
+         } catch(e) {
+           this.editError = e.message
+         } finally {
+           this.editLoading = false
+         }
+       },
+
+       statusLabel(s) {
+         const MAP = {
+           pending_deposit: 'Esperando seña',
+           deposit_paid: 'Seña pagada',
+           in_progress: 'En preparación',
+           ready: 'Listo para retirar',
+           delivered: 'Entregado',
+           cancelled: 'Cancelado',
+         }
+         return MAP[s] || s
+       },
+
+       statusColor(s) {
+         if (s === 'cancelled') return 'color:#C0392B;background:rgba(231,76,60,0.1)'
+         if (s === 'delivered') return 'color:#27AE60;background:rgba(39,174,96,0.1)'
+         if (s === 'ready') return 'color:#2980B9;background:rgba(41,128,185,0.1)'
+         return 'color:#C25D8A;background:rgba(240,160,196,0.18)'
+       },
+
+       fmtDate(d) {
+         if (!d) return ''
+         const parts = d.split('-')
+         const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+         return `${parts[2]} de ${months[parseInt(parts[1])-1]} de ${parts[0]}`
+       }
+     }">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-10"
+          style="background:rgba(253,246,236,0.95);border-bottom:1px solid rgba(58,36,23,0.08);backdrop-filter:blur(8px)">
+    <div class="flex items-center justify-between px-5 py-4" style="max-width:700px;margin:0 auto">
+      <div class="flex items-center gap-3">
+        <a href="/"><img src="{% static 'brand/logo-icon.png' %}" alt="" style="height:30px;width:auto"></a>
+        <a href="/"><img src="{% static 'brand/logo-wordmark.png' %}" alt="Dulceras Team" class="hidden sm:block" style="height:24px;width:auto"></a>
+      </div>
+      <div class="flex items-center gap-3">
+        <button @click="openEdit()" class="text-sm font-medium no-underline transition-opacity hover:opacity-70"
+                style="color:#E285AF;background:none;border:none;cursor:pointer">
+          Editar perfil
+        </button>
+        <button @click="$store.customerAuth.logout()"
+                class="text-sm font-medium" style="color:#5A3B29;background:none;border:none;cursor:pointer">
+          Salir
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div style="max-width:700px;margin:0 auto;padding:32px 16px">
+
+    <!-- Greeting -->
+    <div class="mb-8">
+      <h1 class="font-fraunces font-bold text-brown" style="font-size:clamp(1.6rem,4vw,2rem)">
+        Hola, <span x-text="$store.customerAuth.customer?.name?.split(' ')[0] ?? ''"></span> 👋
+      </h1>
+      <p class="text-brown-soft text-sm mt-1">Acá encontrás el historial de todos tus pedidos.</p>
+    </div>
+
+    <!-- Loading -->
+    <div x-show="loading" class="flex justify-center py-16">
+      <div style="width:40px;height:40px;border:3px solid #EFE2CB;border-top-color:#E285AF;border-radius:50%;animation:spin 1s linear infinite"></div>
+    </div>
+
+    <!-- Error -->
+    <div x-show="error && !loading" class="text-center py-10">
+      <p class="text-brown-soft" x-text="error"></p>
+    </div>
+
+    <!-- Empty -->
+    <div x-show="!loading && !error && orders.length === 0" class="text-center py-16">
+      <div class="mx-auto flex items-center justify-center rounded-full mb-5"
+           style="width:80px;height:80px;background:#F6EAD6">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E285AF" stroke-width="1.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      </div>
+      <h2 class="font-fraunces font-bold text-brown mb-2" style="font-size:1.4rem">Todavía no hiciste pedidos</h2>
+      <p class="text-brown-soft text-sm mb-6">¡Explorá el catálogo y hacé tu primer pedido!</p>
+      <a href="/catalogo/" class="inline-block text-sm font-semibold text-white rounded-full px-8 py-3 no-underline"
+         style="background:linear-gradient(135deg,#F0A0C4,#E285AF);box-shadow:0 6px 18px rgba(226,133,175,0.45)">
+        Ver catálogo
+      </a>
+    </div>
+
+    <!-- Orders list -->
+    <div x-show="!loading && orders.length > 0" class="space-y-4">
+      <template x-for="order in orders" :key="order.id">
+        <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.08);box-shadow:0 4px 20px rgba(58,36,23,0.06);padding:20px 22px">
+          <!-- Header row -->
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <p class="font-fraunces font-bold text-brown" style="font-size:1.2rem" x-text="'Pedido #' + order.id"></p>
+              <p class="text-xs text-brown-soft mt-0.5" x-text="fmtDate(order.required_date)"></p>
+            </div>
+            <span class="text-xs font-semibold rounded-full px-3 py-1.5" :style="statusColor(order.status)" x-text="statusLabel(order.status)"></span>
+          </div>
+
+          <!-- Items -->
+          <div class="space-y-1 mb-3 text-sm text-brown-soft">
+            <template x-for="item in (order.items ?? [])" :key="item.id">
+              <p x-text="item.product_name + ' — ' + item.variant_name + ' x' + item.quantity"></p>
+            </template>
+          </div>
+
+          <!-- Footer row -->
+          <div class="flex items-center justify-between pt-3" style="border-top:1px solid rgba(58,36,23,0.07)">
+            <span class="font-bold text-brown text-sm" x-text="'Total: $' + Number(order.total).toLocaleString('es-AR')"></span>
+            <a :href="'/pedido/' + order.id + '/'"
+               class="text-sm font-semibold no-underline transition-opacity hover:opacity-70"
+               style="color:#E285AF">
+              Ver detalle →
+            </a>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Edit profile modal -->
+  <div x-show="editOpen" x-transition @click.self="editOpen=false"
+       class="fixed inset-0 z-50 flex items-center justify-center p-4"
+       style="background:rgba(0,0,0,0.4)">
+    <div class="w-full max-w-sm bg-white rounded-2xl" style="padding:28px;box-shadow:0 24px 60px rgba(58,36,23,0.18)" @click.stop>
+      <h2 class="font-fraunces font-bold text-brown mb-5" style="font-size:1.2rem">Editar perfil</h2>
+
+      <div x-show="editError" class="flex items-center gap-2 text-sm rounded-xl px-3 py-2.5 mb-4"
+           style="background:#FFF0F0;border:1px solid rgba(231,76,60,0.2);color:#C0392B">
+        <span x-text="editError"></span>
+      </div>
+      <div x-show="editSuccess" class="text-sm rounded-xl px-3 py-2.5 mb-4 font-semibold"
+           style="background:rgba(39,174,96,0.1);color:#27AE60" x-text="editSuccess"></div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium text-brown-soft mb-1">Nombre</label>
+          <input type="text" x-model="editForm.name"
+                 class="w-full text-sm outline-none rounded-xl px-4 py-2.5"
+                 style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff"
+                 onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-brown-soft mb-1">Teléfono</label>
+          <input type="tel" x-model="editForm.phone"
+                 class="w-full text-sm outline-none rounded-xl px-4 py-2.5"
+                 style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff"
+                 onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-brown-soft mb-1">Email</label>
+          <input type="email" x-model="editForm.email"
+                 class="w-full text-sm outline-none rounded-xl px-4 py-2.5"
+                 style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff"
+                 onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        </div>
+      </div>
+
+      <div class="flex gap-3 mt-5">
+        <button @click="editOpen=false"
+                class="flex-1 text-sm font-semibold py-2.5 rounded-xl"
+                style="background:#F6EAD6;color:#5A3B29;border:none;cursor:pointer">
+          Cancelar
+        </button>
+        <button @click="saveEdit()" :disabled="editLoading"
+                class="flex-1 text-sm font-semibold text-white py-2.5 rounded-xl"
+                :style="editLoading ? 'background:rgba(226,133,175,0.6);cursor:not-allowed;border:none' : 'background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none;cursor:pointer'">
+          <span x-text="editLoading ? 'Guardando...' : 'Guardar'"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
