@@ -1,0 +1,423 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Checkout — Dulceras Team{% endblock %}
+
+{% block content %}
+<div class="min-h-screen font-poppins" style="background:#FDF6EC"
+     x-data="{
+       /* ── Cart ref ──────────────────────────────────────── */
+       get cartItems() { return $store.cart.items },
+       get cartTotal() { return $store.cart.total },
+       get maxHours() { return $store.cart.maxAdvanceHours || 48 },
+
+       /* ── Form ──────────────────────────────────────────── */
+       form: {
+         customer_name:       '',
+         customer_phone:      '',
+         customer_email:      '',
+         delivery_method:     'pickup',
+         delivery_zone_id:    '',
+         required_date:       '',
+         address_street:      '',
+         address_neighborhood:'',
+         notes:               '',
+       },
+       errors: {},
+       submitting: false,
+
+       /* ── Coupon ────────────────────────────────────────── */
+       couponInput: '',
+       coupon: null,
+       couponError: '',
+       couponLoading: false,
+
+       /* ── Delivery zones ────────────────────────────────── */
+       zones: [],
+       unavailableDates: [],
+
+       /* ── Computed ──────────────────────────────────────── */
+       get selectedZone() { return this.zones.find(z => z.id == this.form.delivery_zone_id) },
+       get deliveryCost() { return this.form.delivery_method === 'delivery' && this.selectedZone ? Number(this.selectedZone.price) : 0 },
+       get discount() { return this.coupon?.discount ?? 0 },
+       get orderTotal() { return this.cartTotal + this.deliveryCost - this.discount },
+       get deposit() { return this.orderTotal * 0.5 },
+
+       /* ── Min date ──────────────────────────────────────── */
+       get minDate() {
+         const d = new Date()
+         d.setHours(0,0,0,0)
+         d.setDate(d.getDate() + Math.ceil(this.maxHours / 24))
+         return d.toISOString().split('T')[0]
+       },
+
+       async init() {
+         /* Pre-fill from customer profile */
+         const c = $store.customerAuth.customer
+         if (c) {
+           this.form.customer_name  = c.name  ?? ''
+           this.form.customer_phone = c.phone ?? ''
+           this.form.customer_email = c.email ?? ''
+         }
+         /* Load zones + availability */
+         try {
+           const [zonesRes, availRes] = await Promise.all([
+             fetch('/api/public/dulceras-team/orders/delivery-zones/'),
+             fetch('/api/public/dulceras-team/orders/date-availability/'),
+           ])
+           if (zonesRes.ok) this.zones = await zonesRes.json()
+           if (availRes.ok) {
+             const a = await availRes.json()
+             this.unavailableDates = a.unavailable ?? []
+           }
+         } catch {}
+       },
+
+       /* ── Coupon ────────────────────────────────────────── */
+       async applyCoupon() {
+         const code = this.couponInput.trim()
+         if (!code) return
+         this.couponLoading = true
+         this.couponError = ''
+         try {
+           const res = await fetch('/api/public/dulceras-team/orders/coupons/validate/', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ code, subtotal: this.cartTotal + this.deliveryCost })
+           })
+           const data = await res.json()
+           if (data.valid) {
+             this.coupon = { code: data.code, discount: data.discount_amount }
+             this.couponError = ''
+           } else {
+             this.coupon = null
+             this.couponError = data.error ?? 'Cupón inválido.'
+           }
+         } catch {
+           this.couponError = 'No se pudo validar el cupón.'
+         } finally {
+           this.couponLoading = false
+         }
+       },
+
+       removeCoupon() {
+         this.coupon = null
+         this.couponInput = ''
+         this.couponError = ''
+       },
+
+       /* ── Submit ────────────────────────────────────────── */
+       async handleSubmit() {
+         const errs = {}
+         if (!this.form.customer_name.trim())  errs.customer_name  = 'Ingresá tu nombre.'
+         if (!this.form.customer_phone.trim()) errs.customer_phone = 'Ingresá tu teléfono.'
+         if (!this.form.required_date)         errs.required_date  = 'Elegí una fecha.'
+         else if (this.unavailableDates.includes(this.form.required_date))
+           errs.required_date = 'Esa fecha ya está completa. Elegí otra.'
+         if (this.form.delivery_method === 'delivery') {
+           if (!this.form.delivery_zone_id)       errs.delivery_zone_id = 'Elegí una zona de entrega.'
+           if (!this.form.address_street.trim())  errs.address_street   = 'Ingresá tu dirección.'
+         }
+         if (Object.keys(errs).length) { this.errors = errs; return }
+
+         this.submitting = true
+         this.errors = {}
+         try {
+           const payload = {
+             customer_name:  this.form.customer_name,
+             customer_phone: this.form.customer_phone,
+             customer_email: this.form.customer_email || undefined,
+             items: this.cartItems.map(i => ({ variant_id: i.variantId, quantity: i.quantity })),
+             delivery_method: this.form.delivery_method,
+             delivery_zone_id: this.form.delivery_method === 'delivery' ? Number(this.form.delivery_zone_id) : null,
+             required_date: this.form.required_date,
+             address_street: this.form.address_street || undefined,
+             address_neighborhood: this.form.address_neighborhood || undefined,
+             notes: this.form.notes || undefined,
+             coupon_code: this.coupon?.code || undefined,
+           }
+           const res = await fetch('/api/public/dulceras-team/orders/', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify(payload)
+           })
+           const data = await res.json()
+           if (!res.ok) {
+             const knownFields = new Set(['customer_name','customer_phone','customer_email','required_date','delivery_zone_id','address_street','address_neighborhood','notes'])
+             const mapped = {}
+             for (const [k, v] of Object.entries(data)) {
+               const msg = Array.isArray(v) ? String(v[0]) : String(v)
+               if (k === 'non_field_errors' || k === 'detail') mapped._global = msg
+               else if (knownFields.has(k)) mapped[k] = msg
+               else if (!mapped._global) mapped._global = msg
+             }
+             if (!Object.keys(mapped).length) mapped._global = 'Error al procesar el pedido.'
+             this.errors = mapped
+             return
+           }
+           $store.cart.clear()
+           window.location.href = '/pedido/' + data.id + '/'
+         } catch {
+           this.errors = { _global: 'Ocurrió un error. Intentá de nuevo.' }
+         } finally {
+           this.submitting = false
+         }
+       },
+
+       fmt(n) { return Number(n).toLocaleString('es-AR') },
+       inputBorder(field) { return this.errors[field] ? '1.5px solid #E74C3C' : '1.5px solid rgba(58,36,23,0.15)' },
+     }">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-10"
+          style="background:rgba(253,246,236,0.95);border-bottom:1px solid rgba(58,36,23,0.08);backdrop-filter:blur(8px)">
+    <div class="max-w-4xl mx-auto px-5 h-14 flex items-center gap-4">
+      <a href="/" class="flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-70 no-underline" style="color:#E285AF">← Volver</a>
+      <span style="color:rgba(58,36,23,0.2)">|</span>
+      <div class="flex items-center gap-2">
+        <img src="{% static 'brand/logo-icon.png' %}" alt="" style="height:28px;width:auto">
+        <img src="{% static 'brand/logo-wordmark.png' %}" alt="Dulceras Team" style="height:22px;width:auto">
+      </div>
+    </div>
+  </header>
+
+  <!-- Empty cart -->
+  <div x-show="cartItems.length === 0" class="flex items-center justify-center px-4" style="min-height:calc(100vh - 56px)">
+    <div class="text-center">
+      <div class="mx-auto flex items-center justify-center rounded-full mb-5" style="width:80px;height:80px;background:#F6EAD6">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E285AF" stroke-width="1.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      </div>
+      <h2 class="font-fraunces font-bold text-brown mb-2" style="font-size:1.6rem">Tu carrito está vacío</h2>
+      <p class="text-brown-soft mb-6 text-sm">Agregá algo rico antes de continuar</p>
+      <a href="/" class="inline-block text-sm font-semibold text-white rounded-full px-8 py-3 no-underline"
+         style="background:linear-gradient(135deg,#F0A0C4,#E285AF);box-shadow:0 6px 18px rgba(226,133,175,0.45)">
+        Ver catálogo
+      </a>
+    </div>
+  </div>
+
+  <!-- Checkout form -->
+  <div x-show="cartItems.length > 0" class="max-w-4xl mx-auto px-4 py-8">
+    <div class="mb-7">
+      <h1 class="font-fraunces font-bold text-brown" style="font-size:clamp(1.6rem,4vw,2rem)">Completá tu pedido</h1>
+      <p class="text-brown-soft text-sm flex items-center gap-1.5 mt-1">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Necesitamos al menos <span x-text="maxHours"></span>h de anticipación.
+      </p>
+    </div>
+
+    <!-- Global error -->
+    <div x-show="errors._global" class="flex items-center gap-2.5 text-sm rounded-xl px-4 py-3 mb-6"
+         style="background:#FFF0F0;border:1px solid rgba(231,76,60,0.25);color:#C0392B">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span x-text="errors._global"></span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+
+      <!-- ── Form 3/5 ── -->
+      <div class="md:col-span-3 space-y-5">
+
+        <!-- Datos personales -->
+        <section class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.08);box-shadow:0 4px 20px rgba(58,36,23,0.06);padding:22px 24px">
+          <h2 class="font-fraunces font-bold text-brown mb-4" style="font-size:1.1rem">Tus datos</h2>
+          <div class="space-y-3">
+            <div>
+              <input type="text" x-model="form.customer_name" placeholder="Nombre y apellido *"
+                     :style="`width:100%;border-radius:12px;padding:11px 16px;font-size:0.875rem;color:#3A2417;background:#fff;outline:none;border:${inputBorder('customer_name')};transition:border-color 0.2s`"
+                     @focus="$el.style.borderColor = errors.customer_name ? '#E74C3C' : '#E285AF'"
+                     @blur="$el.style.borderColor = errors.customer_name ? '#E74C3C' : 'rgba(58,36,23,0.15)'">
+              <p x-show="errors.customer_name" x-text="errors.customer_name" class="text-xs mt-1.5" style="color:#C0392B"></p>
+            </div>
+            <div>
+              <input type="tel" x-model="form.customer_phone" placeholder="Teléfono / WhatsApp *"
+                     :style="`width:100%;border-radius:12px;padding:11px 16px;font-size:0.875rem;color:#3A2417;background:#fff;outline:none;border:${inputBorder('customer_phone')};transition:border-color 0.2s`"
+                     @focus="$el.style.borderColor = errors.customer_phone ? '#E74C3C' : '#E285AF'"
+                     @blur="$el.style.borderColor = errors.customer_phone ? '#E74C3C' : 'rgba(58,36,23,0.15)'">
+              <p x-show="errors.customer_phone" x-text="errors.customer_phone" class="text-xs mt-1.5" style="color:#C0392B"></p>
+            </div>
+            <input type="email" x-model="form.customer_email" placeholder="Email (opcional)"
+                   style="width:100%;border-radius:12px;padding:11px 16px;font-size:0.875rem;color:#3A2417;background:#fff;outline:none;border:1.5px solid rgba(58,36,23,0.15);transition:border-color 0.2s"
+                   onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+          </div>
+        </section>
+
+        <!-- Entrega -->
+        <section class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.08);box-shadow:0 4px 20px rgba(58,36,23,0.06);padding:22px 24px">
+          <h2 class="font-fraunces font-bold text-brown mb-4" style="font-size:1.1rem">Entrega</h2>
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <button type="button" @click="form.delivery_method='pickup'"
+                    :style="form.delivery_method==='pickup'
+                      ? 'background:linear-gradient(135deg,#F0A0C4,#E285AF);color:#fff;border:none;box-shadow:0 4px 12px rgba(226,133,175,0.35)'
+                      : 'background:#fff;color:#5A3B29;border:1.5px solid rgba(58,36,23,0.15)'"
+                    class="py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all"
+                    style="cursor:pointer">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              Retiro en local
+            </button>
+            <button type="button" @click="form.delivery_method='delivery'"
+                    :style="form.delivery_method==='delivery'
+                      ? 'background:linear-gradient(135deg,#F0A0C4,#E285AF);color:#fff;border:none;box-shadow:0 4px 12px rgba(226,133,175,0.35)'
+                      : 'background:#fff;color:#5A3B29;border:1.5px solid rgba(58,36,23,0.15)'"
+                    class="py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all"
+                    style="cursor:pointer">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              Delivery a CABA
+            </button>
+          </div>
+
+          <!-- Pickup info -->
+          <div x-show="form.delivery_method === 'pickup'"
+               class="flex items-center gap-2.5 text-sm rounded-xl px-4 py-3"
+               style="background:#F6EAD6;color:#5A3B29">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E285AF" stroke-width="2" style="flex-shrink:0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Retiro en <strong class="text-brown ml-1">Almagro, CABA</strong>.
+            <span class="ml-1 text-brown-soft">Te avisamos cuando está listo.</span>
+          </div>
+
+          <!-- Delivery fields -->
+          <div x-show="form.delivery_method === 'delivery'" class="space-y-3">
+            <div>
+              <select x-model="form.delivery_zone_id"
+                      :style="`width:100%;border-radius:12px;padding:11px 16px;font-size:0.875rem;color:#3A2417;background:#fff;outline:none;border:${inputBorder('delivery_zone_id')};transition:border-color 0.2s`"
+                      @focus="$el.style.borderColor='#E285AF'" @blur="$el.style.borderColor='rgba(58,36,23,0.15)'">
+                <option value="">Zona de entrega *</option>
+                <template x-for="z in zones" :key="z.id">
+                  <option :value="z.id" x-text="z.name + ' — $' + Number(z.price).toLocaleString('es-AR')"></option>
+                </template>
+              </select>
+              <p x-show="errors.delivery_zone_id" x-text="errors.delivery_zone_id" class="text-xs mt-1.5" style="color:#C0392B"></p>
+            </div>
+            <div>
+              <input type="text" x-model="form.address_street" placeholder="Calle y número *"
+                     :style="`width:100%;border-radius:12px;padding:11px 16px;font-size:0.875rem;color:#3A2417;background:#fff;outline:none;border:${inputBorder('address_street')};transition:border-color 0.2s`"
+                     @focus="$el.style.borderColor='#E285AF'" @blur="$el.style.borderColor='rgba(58,36,23,0.15)'">
+              <p x-show="errors.address_street" x-text="errors.address_street" class="text-xs mt-1.5" style="color:#C0392B"></p>
+            </div>
+            <input type="text" x-model="form.address_neighborhood" placeholder="Barrio (opcional)"
+                   style="width:100%;border-radius:12px;padding:11px 16px;font-size:0.875rem;color:#3A2417;background:#fff;outline:none;border:1.5px solid rgba(58,36,23,0.15)"
+                   onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+          </div>
+        </section>
+
+        <!-- Fecha -->
+        <section class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.08);box-shadow:0 4px 20px rgba(58,36,23,0.06);padding:22px 24px">
+          <h2 class="font-fraunces font-bold text-brown mb-1" style="font-size:1.1rem">¿Cuándo lo necesitás?</h2>
+          <p class="text-brown-soft text-xs mb-3 flex items-center gap-1">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Mínimo <span x-text="maxHours"></span>h de anticipación
+          </p>
+          <input type="date" x-model="form.required_date" :min="minDate"
+                 :style="`width:100%;border-radius:12px;padding:11px 16px;font-size:0.875rem;color:#3A2417;background:#fff;outline:none;border:${inputBorder('required_date')};transition:border-color 0.2s`"
+                 @focus="$el.style.borderColor='#E285AF'"
+                 @blur="$el.style.borderColor='rgba(58,36,23,0.15)'"
+                 @change="if (unavailableDates.includes(form.required_date)) errors.required_date='Esa fecha está completa. Elegí otra.'; else delete errors.required_date">
+          <p x-show="errors.required_date" x-text="errors.required_date" class="text-xs mt-1.5" style="color:#C0392B"></p>
+          <p x-show="form.required_date && !errors.required_date" class="flex items-center gap-1 text-xs mt-1.5" style="color:#27AE60">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            Fecha disponible
+          </p>
+        </section>
+
+        <!-- Notas -->
+        <section class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.08);box-shadow:0 4px 20px rgba(58,36,23,0.06);padding:22px 24px">
+          <h2 class="font-fraunces font-bold text-brown mb-3" style="font-size:1.1rem">¿Alguna aclaración?</h2>
+          <textarea x-model="form.notes" placeholder="Alergias, dedicatorias, preferencias..." rows="3"
+                    style="width:100%;border-radius:12px;padding:11px 16px;font-size:0.875rem;color:#3A2417;background:#fff;outline:none;border:1.5px solid rgba(58,36,23,0.15);resize:none;transition:border-color 0.2s"
+                    onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'"></textarea>
+        </section>
+      </div>
+
+      <!-- ── Summary 2/5 ── -->
+      <div class="md:col-span-2">
+        <div class="sticky top-20 bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.08);box-shadow:0 4px 20px rgba(58,36,23,0.06);padding:22px 24px">
+          <h2 class="font-fraunces font-bold text-brown mb-4" style="font-size:1.1rem">Tu pedido</h2>
+
+          <!-- Items -->
+          <div class="space-y-3 mb-4">
+            <template x-for="item in cartItems" :key="item.variantId">
+              <div class="flex justify-between text-sm gap-3">
+                <div class="flex-1 min-w-0">
+                  <p class="text-brown font-medium truncate" x-text="item.productName"></p>
+                  <p class="text-brown-soft text-xs opacity-70" x-text="item.variantName + ' × ' + item.quantity"></p>
+                </div>
+                <span class="font-semibold text-brown whitespace-nowrap" x-text="'$' + fmt(item.price * item.quantity)"></span>
+              </div>
+            </template>
+          </div>
+
+          <div style="border-top:1px solid rgba(58,36,23,0.07);margin-bottom:14px"></div>
+
+          <!-- Coupon -->
+          <div x-show="!coupon" class="mb-4">
+            <div class="flex gap-2">
+              <div class="flex-1 relative">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E285AF" stroke-width="2"
+                     style="position:absolute;left:12px;top:50%;transform:translateY(-50%)"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                <input type="text" x-model="couponInput" placeholder="Código de descuento"
+                       @keydown.enter.prevent="applyCoupon()"
+                       style="width:100%;border-radius:12px;padding:10px 16px 10px 32px;font-size:0.875rem;color:#3A2417;background:#fff;outline:none;border:1.5px solid rgba(58,36,23,0.15)"
+                       onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+              </div>
+              <button type="button" @click="applyCoupon()" :disabled="couponLoading || !couponInput.trim()"
+                      class="text-sm font-semibold px-3 rounded-xl transition-opacity disabled:opacity-50"
+                      style="background:#F6EAD6;color:#5A3B29;border:none;cursor:pointer"
+                      x-text="couponLoading ? '...' : 'Aplicar'"></button>
+            </div>
+            <p x-show="couponError" x-text="couponError" class="text-xs mt-1.5" style="color:#C0392B"></p>
+          </div>
+          <div x-show="coupon" class="mb-4 flex items-center justify-between rounded-xl px-3 py-2"
+               style="background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.2)">
+            <span class="text-sm font-semibold flex items-center gap-1.5" style="color:#27AE60">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span x-text="coupon?.code"></span>
+            </span>
+            <button type="button" @click="removeCoupon()" class="text-xs" style="color:#27AE60;background:none;border:none;cursor:pointer">Quitar</button>
+          </div>
+
+          <!-- Totals -->
+          <div class="space-y-1.5 text-sm">
+            <div class="flex justify-between text-brown-soft">
+              <span>Subtotal</span>
+              <span x-text="'$' + fmt(cartTotal)"></span>
+            </div>
+            <div x-show="form.delivery_method === 'delivery'" class="flex justify-between text-brown-soft">
+              <span>Delivery</span>
+              <span x-text="deliveryCost > 0 ? '$' + fmt(deliveryCost) : 'Elegí zona'"></span>
+            </div>
+            <div x-show="discount > 0" class="flex justify-between font-semibold" style="color:#27AE60">
+              <span x-text="'Descuento (' + (coupon?.code ?? '') + ')'"></span>
+              <span x-text="'−$' + fmt(discount)"></span>
+            </div>
+            <div class="flex justify-between font-bold text-brown text-base pt-2"
+                 style="border-top:1px solid rgba(58,36,23,0.07);margin-top:6px">
+              <span>Total</span>
+              <span x-text="'$' + fmt(orderTotal)"></span>
+            </div>
+          </div>
+
+          <!-- Seña -->
+          <div class="mt-4 rounded-xl px-4 py-3"
+               style="background:linear-gradient(135deg,rgba(240,160,196,0.18),rgba(246,234,214,0.6))">
+            <p class="text-xs font-semibold text-brown-soft mb-0.5">Seña a pagar ahora</p>
+            <p class="font-fraunces font-bold" style="font-size:1.5rem;color:#E285AF" x-text="'$' + fmt(deposit)"></p>
+            <p class="text-xs text-brown-soft opacity-70 mt-0.5">50% del total · vía Mercado Pago</p>
+          </div>
+
+          <!-- Submit -->
+          <button type="button" @click="handleSubmit()" :disabled="submitting"
+                  class="w-full mt-5 text-white font-semibold py-4 rounded-full text-sm transition-all"
+                  :style="submitting
+                    ? 'background:rgba(226,133,175,0.6);border:none;cursor:not-allowed'
+                    : 'background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none;cursor:pointer;box-shadow:0 8px 24px rgba(226,133,175,0.45)'"
+                  x-text="submitting ? 'Enviando...' : 'Confirmar pedido 🎉'">
+          </button>
+          <p class="text-center text-xs text-brown-soft mt-2 opacity-70">Luego te avisamos para pagar la seña por MP</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% load static %}
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Dulceras Team{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,400&family=Poppins:wght@400;500;600;700&family=Caveat:wght@400;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS Play CDN (v4 compatible) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream:       '#FDF6EC',
+            'cream-2':   '#F6EAD6',
+            'cream-dark':'#F5E8D0',
+            pink:        '#F0A0C4',
+            'pink-deep': '#E285AF',
+            brown:       '#3A2417',
+            'brown-soft':'#5A3B29',
+            tostado:     '#EFE2CB',
+            chocolate:   '#3D1A0E',
+            rose:        '#E8889A',
+            caramel:     '#D4A76A',
+          },
+          fontFamily: {
+            fraunces: ['"Fraunces"', 'Georgia', 'serif'],
+            poppins:  ['"Poppins"', 'system-ui', 'sans-serif'],
+            caveat:   ['"Caveat"', 'cursive'],
+            adelline: ['"Adelline"', 'Georgia', 'serif'],
+          },
+        },
+      },
+    }
+  </script>
+
+  <!-- Design tokens & custom CSS -->
+  <link rel="stylesheet" href="{% static 'css/main.css' %}" />
+
+  <!-- Alpine.js stores (must load before alpine.js) -->
+  <script src="{% static 'js/app.js' %}"></script>
+
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="font-poppins bg-cream text-brown">
+
+  {% block content %}{% endblock %}
+
+  <!-- API base URL accesible desde JS -->
+  <script>
+    window.DULCERAS = {
+      apiBase: '',   {# mismo origen — Django sirve la API en /api/ #}
+      tenant: 'dulceras-team',
+    }
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

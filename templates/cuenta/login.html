@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ingresar — Mi cuenta{% endblock %}
+
+{% block content %}
+<div class="min-h-screen font-poppins flex items-center justify-center p-4 relative overflow-hidden"
+     style="background:#FDF6EC"
+     x-data="{
+       email: '',
+       password: '',
+       error: '',
+       loading: false,
+       async submit() {
+         this.error = ''
+         this.loading = true
+         try {
+           const res = await fetch('/api/public/{{ tenant_slug }}/customers/login/', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ email: this.email, password: this.password })
+           })
+           const data = await res.json()
+           if (!res.ok) throw new Error(data.detail || 'Error')
+           $store.customerAuth.login(data.tokens, data.customer)
+           const next = new URLSearchParams(window.location.search).get('next') || '/cuenta/pedidos/'
+           window.location.href = next
+         } catch(e) {
+           this.error = e.message || 'Email o contraseña incorrectos.'
+         } finally {
+           this.loading = false
+         }
+       }
+     }"
+     x-init="if ($store.customerAuth.isLoggedIn) window.location.href = '/cuenta/pedidos/'">
+
+  <div aria-hidden="true" style="position:absolute;inset:0;z-index:0;pointer-events:none;
+    background-image:repeating-linear-gradient(100deg,#FDF6EC 0%,#FDF6EC 7%,transparent 10%,transparent 12%,#FDF6EC 16%),repeating-linear-gradient(100deg,#F0A0C4 10%,#E285AF 15%,#EFE2CB 20%,#F7C4DD 25%,#F0A0C4 30%);
+    background-size:300% 200%,200% 100%;background-position:50% 50%,50% 50%;
+    filter:blur(40px);opacity:0.2;animation:aurora-move 60s linear infinite;
+    -webkit-mask-image:radial-gradient(ellipse at 50% 0%,black 10%,transparent 70%);
+    mask-image:radial-gradient(ellipse at 50% 0%,black 10%,transparent 70%)"></div>
+
+  <div class="w-full max-w-sm relative" style="z-index:1">
+    <div class="flex flex-col items-center mb-8">
+      <img src="{% static 'brand/logo-icon.png' %}" alt="" style="height:64px;width:auto;margin-bottom:12px">
+      <img src="{% static 'brand/logo-wordmark.png' %}" alt="Dulceras Team" style="height:48px;width:auto;margin-bottom:8px">
+      <p class="text-brown-soft text-sm font-medium">Tu cuenta de cliente</p>
+    </div>
+
+    <form @submit.prevent="submit()"
+          class="bg-white rounded-2xl space-y-5"
+          style="padding:32px 28px;box-shadow:0 10px 40px rgba(58,36,23,0.10)">
+      <div x-show="error" class="flex items-center gap-2.5 text-sm rounded-xl px-4 py-3"
+           style="background:#FFF0F0;border:1px solid rgba(226,133,175,0.3);color:#9B2335">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span x-text="error"></span>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-brown-soft mb-1.5">Email</label>
+        <input type="email" x-model="email" required autofocus autocomplete="email" placeholder="tu@email.com"
+               class="w-full text-sm outline-none rounded-xl px-4 py-2.5"
+               style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff;transition:border-color 0.2s"
+               onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-brown-soft mb-1.5">Contraseña</label>
+        <input type="password" x-model="password" required autocomplete="current-password" placeholder="••••••••"
+               class="w-full text-sm outline-none rounded-xl px-4 py-2.5"
+               style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff;transition:border-color 0.2s"
+               onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+      </div>
+
+      <button type="submit" :disabled="loading"
+              class="w-full text-sm font-semibold text-white rounded-xl py-3"
+              :style="loading ? 'background:rgba(226,133,175,0.6);cursor:not-allowed;border:none' : 'background:linear-gradient(135deg,#F0A0C4,#E285AF);cursor:pointer;border:none;box-shadow:0 6px 18px rgba(226,133,175,0.45)'">
+        <span x-text="loading ? 'Ingresando...' : 'Ingresar'"></span>
+      </button>
+    </form>
+
+    <p class="text-center text-sm text-brown-soft mt-5">
+      ¿No tenés cuenta?
+      <a href="/cuenta/registro/" class="font-semibold no-underline" style="color:#E285AF">Registrate</a>
+    </p>
+    <p class="text-center mt-3">
+      <a href="/" class="text-sm text-brown-soft no-underline hover:underline">← Volver al inicio</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -4,7 +4,15 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     AdminPaymentViewSet, AdminWebhookViewSet,
     InitiatePaymentView, MercadoPagoWebhookView, PaymentStatusView,
+    payment_success, payment_failure, payment_pending,
 )
+
+# URL patterns para las páginas HTML (template views)
+template_urlpatterns = [
+    path('payment/success/', payment_success, name='payment-success'),
+    path('payment/failure/', payment_failure, name='payment-failure'),
+    path('payment/pending/', payment_pending, name='payment-pending'),
+]
 
 public_urlpatterns = [
     path(

@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Pedido #{{ order.id }} — Dulceras Team{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<header class="sticky top-0 z-10"
+        style="background:rgba(253,246,236,0.95);border-bottom:1px solid rgba(58,36,23,0.08);backdrop-filter:blur(8px)">
+  <div class="max-w-lg mx-auto px-5 h-14 flex items-center gap-2">
+    <a href="/"><img src="{% static 'brand/logo-icon.png' %}"    alt="" style="height:28px;width:auto"></a>
+    <a href="/"><img src="{% static 'brand/logo-wordmark.png' %}" alt="Dulceras Team" style="height:22px;width:auto"></a>
+  </div>
+</header>
+
+<div class="max-w-lg mx-auto px-4 py-10 space-y-5 font-poppins">
+
+  <!-- Hero confirmación -->
+  <div class="text-center py-6">
+    <div class="mx-auto flex items-center justify-center rounded-full mb-5"
+         style="width:80px;height:80px;
+                {% if is_paid %}background:linear-gradient(135deg,#F0A0C4,#E285AF);box-shadow:0 8px 24px rgba(226,133,175,0.35){% else %}background:linear-gradient(135deg,rgba(240,160,196,0.25),rgba(246,234,214,0.8)){% endif %}">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none"
+           stroke="{% if is_paid %}#fff{% else %}#E285AF{% endif %}"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+    </div>
+    <h1 class="font-fraunces font-bold text-brown mb-2" style="font-size:clamp(1.6rem,5vw,2rem)">
+      {% if is_paid %}¡Seña confirmada!{% else %}¡Pedido recibido!{% endif %}
+    </h1>
+    <p class="text-brown-soft text-sm" style="max-width:320px;margin:0 auto">
+      {% if is_paid %}
+        Tu pago fue procesado. Nos ponemos en contacto pronto.
+      {% else %}
+        Para confirmar tu lugar, pagá la seña ahora por Mercado Pago.
+      {% endif %}
+    </p>
+  </div>
+
+  <!-- Card resumen -->
+  <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.08);box-shadow:0 4px 20px rgba(58,36,23,0.06);padding:22px 24px">
+
+    <!-- N° pedido y estado -->
+    <div class="flex items-center justify-between pb-4 mb-4" style="border-bottom:1px solid rgba(58,36,23,0.07)">
+      <div>
+        <p class="font-semibold uppercase" style="font-size:0.7rem;letter-spacing:0.07em;color:#5A3B29;opacity:.6;margin-bottom:2px">
+          N° de pedido
+        </p>
+        <p class="font-fraunces font-bold text-brown" style="font-size:1.6rem;line-height:1">#{{ order.id }}</p>
+      </div>
+      <span class="text-xs font-semibold rounded-full px-3 py-1.5"
+            style="background:rgba(240,160,196,0.18);color:#C25D8A">
+        {{ order.get_status_display }}
+      </span>
+    </div>
+
+    <!-- Items -->
+    <div class="space-y-3 mb-4">
+      {% for item in order.items.all %}
+      <div class="flex justify-between items-start gap-3 text-sm">
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-brown leading-tight">{{ item.product_name }}</p>
+          <p class="text-brown-soft opacity-60 text-xs mt-0.5">{{ item.variant_name }} × {{ item.quantity }}</p>
+        </div>
+        <span class="font-semibold text-brown whitespace-nowrap">
+          ${{ item.subtotal|floatformat:0 }}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Detalles de entrega y totales -->
+    <div class="space-y-2 pt-3 mt-3 text-sm" style="border-top:1px solid rgba(58,36,23,0.07)">
+      <div class="flex items-center justify-between text-brown-soft">
+        <span class="flex items-center gap-1.5">
+          {% if order.delivery_method == 'delivery' %}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          {% else %}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          {% endif %}
+          Entrega
+        </span>
+        <span>{{ order.get_delivery_method_display }}</span>
+      </div>
+      <div class="flex items-center justify-between text-brown-soft">
+        <span class="flex items-center gap-1.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Fecha
+        </span>
+        <span class="capitalize">{{ order.required_date|date:"l j \d\e F" }}</span>
+      </div>
+      {% if order.delivery_cost %}
+      <div class="flex justify-between text-brown-soft">
+        <span>Delivery</span>
+        <span>${{ order.delivery_cost|floatformat:0 }}</span>
+      </div>
+      {% endif %}
+      {% if order.discount_amount %}
+      <div class="flex justify-between font-semibold" style="color:#27AE60">
+        <span>Descuento</span>
+        <span>−${{ order.discount_amount|floatformat:0 }}</span>
+      </div>
+      {% endif %}
+      <div class="flex justify-between font-bold text-brown pt-2"
+           style="border-top:1px solid rgba(58,36,23,0.07);font-size:0.95rem">
+        <span>Total</span>
+        <span>${{ order.total|floatformat:0 }}</span>
+      </div>
+    </div>
+
+    <!-- Seña -->
+    <div class="mt-4 rounded-2xl px-4 py-4 text-center"
+         style="background:linear-gradient(135deg,rgba(240,160,196,0.18),rgba(246,234,214,0.6))">
+      <p class="text-xs font-semibold text-brown-soft mb-1">Seña a pagar ahora</p>
+      <p class="font-fraunces font-bold" style="font-size:2rem;color:#E285AF;line-height:1">
+        ${{ order.deposit_amount|floatformat:0 }}
+      </p>
+      <p class="text-xs text-brown-soft opacity-60 mt-1">{{ order.deposit_percentage|floatformat:0 }}% del total · vía Mercado Pago</p>
+    </div>
+  </div>
+
+  <!-- Error de pago (oculto, lo muestra JS si falla) -->
+  <div id="pay-error" class="hidden items-center gap-2.5 text-sm rounded-xl px-4 py-3"
+       style="background:#FFF0F0;border:1px solid rgba(231,76,60,0.25);color:#C0392B">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span id="pay-error-msg"></span>
+  </div>
+
+  <!-- CTAs -->
+  <div class="flex flex-col gap-3 pb-6">
+    {% if not is_paid %}
+    <button id="pay-btn" onclick="handlePay()"
+            class="w-full text-white font-semibold py-4 rounded-full text-sm flex items-center justify-center gap-2 transition-all"
+            style="background:#009ee3;border:none;cursor:pointer;box-shadow:0 6px 18px rgba(0,158,227,0.35)"
+            onmouseenter="this.style.transform='translateY(-1px)'"
+            onmouseleave="this.style.transform=''">
+      💳 Pagar seña con Mercado Pago
+    </button>
+    {% endif %}
+
+    <a href="https://wa.me/5491100000000?text=Hola%21+Hice+el+pedido+%23{{ order.id }}"
+       target="_blank" rel="noopener noreferrer"
+       class="w-full font-semibold py-3.5 rounded-full text-center text-sm flex items-center justify-center gap-2 transition-all"
+       style="background:#25D366;color:#fff;border:none;box-shadow:0 4px 14px rgba(37,211,102,0.3)"
+       onmouseenter="this.style.transform='translateY(-1px)'"
+       onmouseleave="this.style.transform=''">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Consultar por WhatsApp
+    </a>
+
+    <a href="/"
+       class="w-full font-semibold py-3.5 rounded-full text-center text-sm transition-all"
+       style="background:#F6EAD6;color:#5A3B29;border:none"
+       onmouseenter="this.style.background='#EDD9B8'"
+       onmouseleave="this.style.background='#F6EAD6'">
+      Volver al inicio
+    </a>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if not is_paid %}
+<script>
+async function handlePay() {
+  const btn    = document.getElementById('pay-btn')
+  const errDiv = document.getElementById('pay-error')
+  const errMsg = document.getElementById('pay-error-msg')
+
+  btn.disabled = true
+  btn.style.background  = 'rgba(0,158,227,0.6)'
+  btn.style.cursor      = 'not-allowed'
+  btn.style.boxShadow   = 'none'
+  btn.innerHTML = `
+    <span style="width:16px;height:16px;border:2px solid rgba(255,255,255,0.6);
+                 border-top-color:transparent;border-radius:50%;display:inline-block;
+                 animation:spin 1s linear infinite"></span>
+    Redirigiendo a Mercado Pago...`
+
+  try {
+    const res  = await fetch(`/api/public/${window.DULCERAS.tenant}/payments/orders/{{ order.id }}/initiate/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const data = await res.json()
+    const url  = data.sandbox_init_point || data.init_point
+    if (url) {
+      window.location.href = url
+    } else {
+      throw new Error(data.detail || 'No se pudo iniciar el pago.')
+    }
+  } catch (err) {
+    errMsg.textContent = err.message || 'Error al conectar con Mercado Pago. Intentá de nuevo.'
+    errDiv.classList.remove('hidden')
+    errDiv.classList.add('flex')
+    btn.disabled          = false
+    btn.style.background  = '#009ee3'
+    btn.style.cursor      = 'pointer'
+    btn.style.boxShadow   = '0 6px 18px rgba(0,158,227,0.35)'
+    btn.innerHTML         = '💳 Pagar seña con Mercado Pago'
+  }
+}
+</script>
+{% endif %}
+{% endblock %}

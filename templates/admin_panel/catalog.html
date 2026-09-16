@@ -1,0 +1,188 @@
+{% extends "admin_panel/base.html" %}
+{% block title %}Catálogo — Panel{% endblock %}
+{% block nav_catalog %}active{% endblock %}
+{% block page_title %}Catálogo{% endblock %}
+
+{% block page_content %}
+<div x-data="{
+  tab: 'products',
+  products: [], categories: [], loading: true,
+  productModal: null, catModal: null,
+  pForm: { name:'', description:'', category_id:'', sort_order:0, is_active:true, made_to_order:false },
+  pSaving: false, pError: '',
+  cForm: { name:'', slug:'', is_active:true },
+  cSaving: false, cError: '',
+
+  async load() {
+    this.loading = true
+    try {
+      const [pRes, cRes] = await Promise.all([
+        fetch('/api/admin/catalog/products/?page_size=200', { headers: $store.adminAuth.headers() }),
+        fetch('/api/admin/catalog/categories/?page_size=100', { headers: $store.adminAuth.headers() }),
+      ])
+      if (pRes.ok) { const d = await pRes.json(); this.products = d.results ?? d }
+      if (cRes.ok) { const d = await cRes.json(); this.categories = d.results ?? d }
+    } catch {}
+    this.loading = false
+  },
+
+  openNewProduct() {
+    this.pForm = { name:'', description:'', category_id: this.categories[0]?.id ?? '', sort_order:0, is_active:true, made_to_order:false }
+    this.pError = ''
+    this.productModal = 'new'
+  },
+  openEditProduct(p) {
+    this.pForm = { name: p.name, description: p.description ?? '', category_id: p.category?.id ?? p.category ?? '', sort_order: p.sort_order ?? 0, is_active: p.is_active, made_to_order: p.made_to_order }
+    this.pError = ''
+    this.productModal = p.id
+  },
+  async saveProduct() {
+    this.pSaving = true; this.pError = ''
+    const url = this.productModal === 'new' ? '/api/admin/catalog/products/' : '/api/admin/catalog/products/' + this.productModal + '/'
+    const method = this.productModal === 'new' ? 'POST' : 'PATCH'
+    try {
+      const res = await fetch(url, { method, headers: $store.adminAuth.headers(), body: JSON.stringify({ ...this.pForm, category: this.pForm.category_id }) })
+      if (res.ok) { await this.load(); this.productModal = null }
+      else { const d = await res.json(); this.pError = Object.values(d).flat()[0] ?? 'Error.' }
+    } catch { this.pError = 'Error de red.' }
+    this.pSaving = false
+  },
+  async toggleProduct(p) {
+    await fetch('/api/admin/catalog/products/' + p.id + '/', { method:'PATCH', headers: $store.adminAuth.headers(), body: JSON.stringify({ is_active: !p.is_active }) })
+    await this.load()
+  },
+  async deleteProduct(id) {
+    if (!confirm('¿Eliminar este producto?')) return
+    await fetch('/api/admin/catalog/products/' + id + '/', { method:'DELETE', headers: $store.adminAuth.headers() })
+    await this.load()
+  },
+
+  openNewCat() { this.cForm = { name:'', slug:'', is_active:true }; this.cError = ''; this.catModal = 'new' },
+  async saveCat() {
+    this.cSaving = true; this.cError = ''
+    if (!this.cForm.slug) this.cForm.slug = this.cForm.name.toLowerCase().replace(/\s+/g,'-')
+    const url = this.catModal === 'new' ? '/api/admin/catalog/categories/' : '/api/admin/catalog/categories/' + this.catModal + '/'
+    const method = this.catModal === 'new' ? 'POST' : 'PATCH'
+    try {
+      const res = await fetch(url, { method, headers: $store.adminAuth.headers(), body: JSON.stringify(this.cForm) })
+      if (res.ok) { await this.load(); this.catModal = null }
+      else { const d = await res.json(); this.cError = Object.values(d).flat()[0] ?? 'Error.' }
+    } catch { this.cError = 'Error de red.' }
+    this.cSaving = false
+  },
+}" x-init="load()">
+
+  <!-- Tabs -->
+  <div class="flex gap-2 mb-4">
+    <button @click="tab='products'" :class="tab==='products' ? 'text-white' : 'text-brown-soft bg-white'"
+            :style="tab==='products' ? 'background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none' : 'border:1px solid rgba(58,36,23,0.12)'"
+            class="px-5 py-2 rounded-full text-sm font-semibold" style="cursor:pointer">Productos</button>
+    <button @click="tab='categories'" :class="tab==='categories' ? 'text-white' : 'text-brown-soft bg-white'"
+            :style="tab==='categories' ? 'background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none' : 'border:1px solid rgba(58,36,23,0.12)'"
+            class="px-5 py-2 rounded-full text-sm font-semibold" style="cursor:pointer">Categorías</button>
+  </div>
+
+  <!-- Products tab -->
+  <div x-show="tab==='products'">
+    <div class="flex justify-end mb-3">
+      <button @click="openNewProduct()" class="text-sm font-semibold text-white px-4 py-2 rounded-xl"
+              style="background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none;cursor:pointer">+ Nuevo producto</button>
+    </div>
+    <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05)">
+      <div x-show="loading" class="flex justify-center py-12"><div style="width:32px;height:32px;border:2px solid #EFE2CB;border-top-color:#E285AF;border-radius:50%;animation:spin 1s linear infinite"></div></div>
+      <table class="data-table" x-show="!loading">
+        <thead><tr><th>Nombre</th><th>Categoría</th><th>Variantes</th><th>Activo</th><th></th></tr></thead>
+        <tbody>
+          <template x-for="p in products" :key="p.id">
+            <tr>
+              <td class="font-medium text-brown" x-text="p.name"></td>
+              <td x-text="p.category?.name ?? '—'"></td>
+              <td x-text="p.variants?.length ?? 0"></td>
+              <td>
+                <button @click="toggleProduct(p)" class="badge" :class="p.is_active ? 'badge-green' : 'badge-grey'"
+                        :x-text="p.is_active ? 'Activo' : 'Inactivo'" style="cursor:pointer;border:none"></button>
+              </td>
+              <td class="flex gap-2">
+                <button @click="openEditProduct(p)" class="text-xs text-pink-deep" style="background:none;border:none;cursor:pointer">Editar</button>
+                <button @click="deleteProduct(p.id)" class="text-xs" style="color:#C0392B;background:none;border:none;cursor:pointer">Eliminar</button>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="!loading && products.length===0"><td colspan="5" class="text-center py-10 text-brown-soft">Sin productos.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Categories tab -->
+  <div x-show="tab==='categories'">
+    <div class="flex justify-end mb-3">
+      <button @click="openNewCat()" class="text-sm font-semibold text-white px-4 py-2 rounded-xl"
+              style="background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none;cursor:pointer">+ Nueva categoría</button>
+    </div>
+    <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05)">
+      <table class="data-table">
+        <thead><tr><th>Nombre</th><th>Slug</th><th>Activa</th><th></th></tr></thead>
+        <tbody>
+          <template x-for="c in categories" :key="c.id">
+            <tr>
+              <td class="font-medium text-brown" x-text="c.name"></td>
+              <td class="text-brown-soft" x-text="c.slug"></td>
+              <td><span class="badge" :class="c.is_active ? 'badge-green' : 'badge-grey'" x-text="c.is_active ? 'Activa' : 'Inactiva'"></span></td>
+              <td><button @click="catModal = c.id; cForm = { name: c.name, slug: c.slug, is_active: c.is_active }; cError=''" class="text-xs text-pink-deep" style="background:none;border:none;cursor:pointer">Editar</button></td>
+            </tr>
+          </template>
+          <tr x-show="categories.length===0"><td colspan="4" class="text-center py-10 text-brown-soft">Sin categorías.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Product modal -->
+  <div x-show="productModal !== null" @click.self="productModal=null" x-transition
+       class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.4)">
+    <div class="w-full max-w-sm bg-white rounded-2xl" style="padding:28px;box-shadow:0 24px 60px rgba(58,36,23,0.18)" @click.stop>
+      <h2 class="font-fraunces font-bold text-brown mb-4" style="font-size:1.1rem" x-text="productModal === 'new' ? 'Nuevo producto' : 'Editar producto'"></h2>
+      <div x-show="pError" x-text="pError" class="text-xs text-red-600 mb-3"></div>
+      <div class="space-y-3">
+        <input type="text" x-model="pForm.name" placeholder="Nombre *" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        <textarea x-model="pForm.description" placeholder="Descripción" rows="3" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none resize-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'"></textarea>
+        <select x-model="pForm.category_id" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff">
+          <option value="">Sin categoría</option>
+          <template x-for="c in categories" :key="c.id">
+            <option :value="c.id" x-text="c.name"></option>
+          </template>
+        </select>
+        <label class="flex items-center gap-2 text-sm text-brown-soft cursor-pointer">
+          <input type="checkbox" x-model="pForm.is_active" class="rounded"> Activo
+        </label>
+      </div>
+      <div class="flex gap-3 mt-5">
+        <button @click="productModal=null" class="flex-1 text-sm font-semibold py-2.5 rounded-xl" style="background:#F6EAD6;color:#5A3B29;border:none;cursor:pointer">Cancelar</button>
+        <button @click="saveProduct()" :disabled="pSaving" class="flex-1 text-sm font-semibold text-white py-2.5 rounded-xl disabled:opacity-50" :style="pSaving ? 'background:rgba(226,133,175,0.6);border:none;cursor:not-allowed' : 'background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none;cursor:pointer'" x-text="pSaving ? 'Guardando...' : 'Guardar'"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category modal -->
+  <div x-show="catModal !== null" @click.self="catModal=null" x-transition
+       class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.4)">
+    <div class="w-full max-w-sm bg-white rounded-2xl" style="padding:28px;box-shadow:0 24px 60px rgba(58,36,23,0.18)" @click.stop>
+      <h2 class="font-fraunces font-bold text-brown mb-4" style="font-size:1.1rem" x-text="catModal === 'new' ? 'Nueva categoría' : 'Editar categoría'"></h2>
+      <div x-show="cError" x-text="cError" class="text-xs text-red-600 mb-3"></div>
+      <div class="space-y-3">
+        <input type="text" x-model="cForm.name" placeholder="Nombre *" @input="if (catModal==='new') cForm.slug=cForm.name.toLowerCase().replace(/\s+/g,'-')" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        <input type="text" x-model="cForm.slug" placeholder="Slug *" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        <label class="flex items-center gap-2 text-sm text-brown-soft cursor-pointer">
+          <input type="checkbox" x-model="cForm.is_active" class="rounded"> Activa
+        </label>
+      </div>
+      <div class="flex gap-3 mt-5">
+        <button @click="catModal=null" class="flex-1 text-sm font-semibold py-2.5 rounded-xl" style="background:#F6EAD6;color:#5A3B29;border:none;cursor:pointer">Cancelar</button>
+        <button @click="saveCat()" :disabled="cSaving" class="flex-1 text-sm font-semibold text-white py-2.5 rounded-xl disabled:opacity-50" :style="cSaving ? 'background:rgba(226,133,175,0.6);border:none;cursor:not-allowed' : 'background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none;cursor:pointer'" x-text="cSaving ? 'Guardando...' : 'Guardar'"></button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

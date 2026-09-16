@@ -1,0 +1,88 @@
+{% extends "admin_panel/base.html" %}
+{% block title %}Configuración — Panel{% endblock %}
+{% block nav_settings %}active{% endblock %}
+{% block page_title %}Configuración{% endblock %}
+
+{% block page_content %}
+<div x-data="{
+  profile: null, loading: true, saving: false, saved: false, error: '',
+  form: { phone:'', email:'', whatsapp:'', instagram:'', address:'', advance_hours_required:48 },
+
+  async load() {
+    try {
+      const res = await fetch('/api/admin/tenants/profile/', { headers: $store.adminAuth.headers() })
+      if (res.ok) {
+        this.profile = await res.json()
+        this.form = {
+          phone: this.profile.phone ?? '',
+          email: this.profile.email ?? '',
+          whatsapp: this.profile.whatsapp ?? '',
+          instagram: this.profile.instagram ?? '',
+          address: this.profile.address ?? '',
+          advance_hours_required: this.profile.advance_hours_required ?? 48,
+        }
+      }
+    } catch {}
+    this.loading = false
+  },
+
+  async save() {
+    this.saving = true; this.error = ''; this.saved = false
+    try {
+      const res = await fetch('/api/admin/tenants/profile/', {
+        method: 'PATCH', headers: $store.adminAuth.headers(), body: JSON.stringify(this.form)
+      })
+      if (res.ok) { this.profile = await res.json(); this.saved = true; setTimeout(() => this.saved = false, 2500) }
+      else { const d = await res.json(); this.error = Object.values(d).flat()[0] ?? 'Error.' }
+    } catch { this.error = 'Error de red.' }
+    this.saving = false
+  },
+}" x-init="load()">
+
+  <div x-show="loading" class="flex justify-center py-16">
+    <div style="width:36px;height:36px;border:2px solid #EFE2CB;border-top-color:#E285AF;border-radius:50%;animation:spin 1s linear infinite"></div>
+  </div>
+
+  <div x-show="!loading" class="max-w-xl">
+    <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05);padding:24px">
+      <h2 class="font-fraunces font-bold text-brown mb-5" style="font-size:1rem">Perfil del negocio</h2>
+
+      <div x-show="error" x-text="error" class="text-xs text-red-600 mb-3 bg-red-50 rounded-xl px-3 py-2"></div>
+      <div x-show="saved" class="text-xs font-semibold text-green-700 mb-3 rounded-xl px-3 py-2" style="background:rgba(39,174,96,0.08)">¡Guardado!</div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-brown-soft mb-1.5">Teléfono</label>
+          <input type="text" x-model="form.phone" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-brown-soft mb-1.5">Email de contacto</label>
+          <input type="email" x-model="form.email" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-brown-soft mb-1.5">WhatsApp</label>
+          <input type="text" x-model="form.whatsapp" placeholder="+549..." class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-brown-soft mb-1.5">Instagram</label>
+          <input type="text" x-model="form.instagram" placeholder="@usuario" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-brown-soft mb-1.5">Dirección</label>
+          <input type="text" x-model="form.address" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-brown-soft mb-1.5">Horas de anticipación mínima</label>
+          <input type="number" x-model="form.advance_hours_required" min="0" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        </div>
+      </div>
+
+      <button @click="save()" :disabled="saving"
+              class="mt-5 text-sm font-semibold text-white px-6 py-2.5 rounded-xl"
+              :style="saving ? 'background:rgba(226,133,175,0.6);border:none;cursor:not-allowed' : 'background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none;cursor:pointer'"
+              x-text="saving ? 'Guardando...' : 'Guardar cambios'">
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}

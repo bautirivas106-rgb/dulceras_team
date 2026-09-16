@@ -7,14 +7,49 @@ from users.views import CustomTokenObtainPairView
 
 from tenants.urls import public_urlpatterns as tenants_public, admin_urlpatterns as tenants_admin, superadmin_urlpatterns, register_urlpatterns
 from catalog.urls import public_urlpatterns as catalog_public, admin_urlpatterns as catalog_admin
-from orders.urls import public_urlpatterns as orders_public, admin_urlpatterns as orders_admin, coupon_urlpatterns as coupons_admin
+from orders.urls import public_urlpatterns as orders_public, admin_urlpatterns as orders_admin, coupon_urlpatterns as coupons_admin, template_urlpatterns as orders_templates
 from customers.urls import admin_urlpatterns as customers_admin, public_urlpatterns as customers_public
-from payments.urls import public_urlpatterns as payments_public, admin_urlpatterns as payments_admin
+from payments.urls import public_urlpatterns as payments_public, admin_urlpatterns as payments_admin, template_urlpatterns as payments_templates
 from notifications.urls import admin_urlpatterns as notifications_admin
+from dulceras_team import pages
 
 public_patterns = [*tenants_public, *catalog_public, *orders_public, *payments_public, *customers_public]
 
 urlpatterns = [
+    # ── Template pages (HTML, server-rendered) ─────────────────────────────────
+    *payments_templates,
+    *orders_templates,
+
+    # Public pages
+    path('', pages.landing, name='landing'),
+    path('catalogo/', pages.catalog, name='catalog'),
+    path('checkout/', pages.checkout, name='checkout'),
+    path('register/', pages.register_tenant, name='register'),
+
+    # Customer account
+    path('cuenta/login/', pages.cuenta_login, name='cuenta-login'),
+    path('cuenta/registro/', pages.cuenta_registro, name='cuenta-registro'),
+    path('cuenta/pedidos/', pages.cuenta_pedidos, name='cuenta-pedidos'),
+
+    # Admin panel (must be before path('admin/', admin.site.urls))
+    path('admin/login/', pages.admin_login, name='admin-login'),
+    path('admin/dashboard/', pages.admin_dashboard, name='admin-dashboard'),
+    path('admin/orders/', pages.admin_orders, name='admin-orders'),
+    path('admin/orders/<int:order_id>/', pages.admin_order_detail, name='admin-order-detail'),
+    path('admin/customers/', pages.admin_customers, name='admin-customers'),
+    path('admin/catalog/', pages.admin_catalog, name='admin-catalog'),
+    path('admin/calendar/', pages.admin_calendar, name='admin-calendar'),
+    path('admin/reports/', pages.admin_reports, name='admin-reports'),
+    path('admin/settings/', pages.admin_settings, name='admin-settings'),
+    path('admin/billing/', pages.admin_billing, name='admin-billing'),
+    path('admin/coupons/', pages.admin_coupons, name='admin-coupons'),
+
+    # Superadmin
+    path('superadmin/metrics/', pages.superadmin_metrics, name='superadmin-metrics'),
+    path('superadmin/tenants/', pages.superadmin_tenants, name='superadmin-tenants'),
+    path('superadmin/tenants/<int:tenant_id>/', pages.superadmin_tenant_detail, name='superadmin-tenant-detail'),
+    path('superadmin/plans/', pages.superadmin_plans, name='superadmin-plans'),
+
     # Django admin
     path('admin/', admin.site.urls),
 

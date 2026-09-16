@@ -1,0 +1,68 @@
+{% extends "admin_panel/base.html" %}
+{% block title %}Clientes — Panel{% endblock %}
+{% block nav_customers %}active{% endblock %}
+{% block page_title %}Clientes{% endblock %}
+
+{% block page_content %}
+<div x-data="{
+  customers: [], loading: true, search: '', page: 1, pageSize: 20, totalCount: 0,
+  get totalPages() { return Math.ceil(this.totalCount / this.pageSize) },
+  async load() {
+    this.loading = true
+    const params = new URLSearchParams({ page: this.page, page_size: this.pageSize })
+    if (this.search) params.set('search', this.search)
+    try {
+      const res = await fetch('/api/admin/customers/customers/?' + params, { headers: $store.adminAuth.headers() })
+      if (res.ok) { const d = await res.json(); this.customers = d.results ?? d; this.totalCount = d.count ?? (d.results ? d.count : d.length) }
+    } catch {}
+    this.loading = false
+  },
+  fmt(n) { return Number(n||0).toLocaleString('es-AR') },
+}" x-init="load()">
+
+  <div class="flex gap-3 mb-4">
+    <input type="search" x-model="search" @input.debounce.400ms="page=1; load()" placeholder="Buscar por nombre, teléfono o email..."
+           class="rounded-xl px-4 py-2 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff;min-width:260px"
+           onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+  </div>
+
+  <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05)">
+    <div x-show="loading" class="flex justify-center py-16">
+      <div style="width:36px;height:36px;border:2px solid #EFE2CB;border-top-color:#E285AF;border-radius:50%;animation:spin 1s linear infinite"></div>
+    </div>
+    <table class="data-table" x-show="!loading">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Teléfono</th>
+          <th>Email</th>
+          <th>Pedidos</th>
+          <th>Registrado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="c in customers" :key="c.id">
+          <tr>
+            <td class="font-medium text-brown" x-text="c.name ?? '—'"></td>
+            <td x-text="c.phone ?? '—'"></td>
+            <td x-text="c.email ?? '—'"></td>
+            <td x-text="c.order_count ?? 0"></td>
+            <td x-text="c.created_at ? c.created_at.split('T')[0] : '—'"></td>
+          </tr>
+        </template>
+        <tr x-show="!loading && customers.length === 0">
+          <td colspan="5" class="text-center py-10 text-brown-soft">No hay clientes todavía.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div x-show="totalPages > 1" class="flex items-center justify-between px-5 py-3" style="border-top:1px solid rgba(58,36,23,0.07)">
+      <span class="text-xs text-brown-soft" x-text="totalCount + ' clientes'"></span>
+      <div class="flex gap-2">
+        <button @click="page=Math.max(1,page-1); load()" :disabled="page<=1" class="text-xs px-3 py-1.5 rounded-lg disabled:opacity-40" style="background:#F6EAD6;color:#5A3B29;border:none;cursor:pointer">Anterior</button>
+        <span class="text-xs py-1.5 px-2 text-brown-soft" x-text="page + ' / ' + totalPages"></span>
+        <button @click="page=Math.min(totalPages,page+1); load()" :disabled="page>=totalPages" class="text-xs px-3 py-1.5 rounded-lg disabled:opacity-40" style="background:#F6EAD6;color:#5A3B29;border:none;cursor:pointer">Siguiente</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

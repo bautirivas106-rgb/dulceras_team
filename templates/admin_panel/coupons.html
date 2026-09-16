@@ -1,0 +1,103 @@
+{% extends "admin_panel/base.html" %}
+{% block title %}Cupones — Panel{% endblock %}
+{% block nav_coupons %}active{% endblock %}
+{% block page_title %}Cupones{% endblock %}
+
+{% block page_content %}
+<div x-data="{
+  coupons: [], loading: true, modal: null,
+  form: { code:'', discount_type:'percentage', discount_value:'', min_subtotal:'', max_uses:'', expires_at:'', is_active:true },
+  saving: false, formError: '',
+
+  async load() {
+    this.loading = true
+    try {
+      const res = await fetch('/api/admin/coupons/?page_size=100', { headers: $store.adminAuth.headers() })
+      if (res.ok) { const d = await res.json(); this.coupons = d.results ?? d }
+    } catch {}
+    this.loading = false
+  },
+
+  openNew() {
+    this.form = { code:'', discount_type:'percentage', discount_value:'', min_subtotal:'', max_uses:'', expires_at:'', is_active:true }
+    this.formError = ''; this.modal = 'new'
+  },
+  openEdit(c) {
+    this.form = { code: c.code, discount_type: c.discount_type, discount_value: c.discount_value, min_subtotal: c.min_subtotal ?? '', max_uses: c.max_uses ?? '', expires_at: c.expires_at ? c.expires_at.split('T')[0] : '', is_active: c.is_active }
+    this.formError = ''; this.modal = c.id
+  },
+  async save() {
+    this.saving = true; this.formError = ''
+    const url = this.modal === 'new' ? '/api/admin/coupons/' : '/api/admin/coupons/' + this.modal + '/'
+    const method = this.modal === 'new' ? 'POST' : 'PATCH'
+    try {
+      const res = await fetch(url, { method, headers: $store.adminAuth.headers(), body: JSON.stringify(this.form) })
+      if (res.ok) { await this.load(); this.modal = null }
+      else { const d = await res.json(); this.formError = Object.values(d).flat()[0] ?? 'Error.' }
+    } catch { this.formError = 'Error de red.' }
+    this.saving = false
+  },
+  async toggle(c) {
+    await fetch('/api/admin/coupons/' + c.id + '/', { method:'PATCH', headers: $store.adminAuth.headers(), body: JSON.stringify({ is_active: !c.is_active }) })
+    await this.load()
+  },
+  fmt(n) { return Number(n||0).toLocaleString('es-AR') },
+}" x-init="load()">
+
+  <div class="flex justify-end mb-4">
+    <button @click="openNew()" class="text-sm font-semibold text-white px-4 py-2 rounded-xl"
+            style="background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none;cursor:pointer">+ Nuevo cupón</button>
+  </div>
+
+  <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05)">
+    <div x-show="loading" class="flex justify-center py-12"><div style="width:32px;height:32px;border:2px solid #EFE2CB;border-top-color:#E285AF;border-radius:50%;animation:spin 1s linear infinite"></div></div>
+    <table class="data-table" x-show="!loading">
+      <thead><tr><th>Código</th><th>Tipo</th><th>Valor</th><th>Usos</th><th>Vence</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        <template x-for="c in coupons" :key="c.id">
+          <tr>
+            <td class="font-semibold text-brown font-mono" x-text="c.code"></td>
+            <td x-text="c.discount_type === 'percentage' ? 'Porcentaje' : 'Monto fijo'"></td>
+            <td x-text="c.discount_type === 'percentage' ? c.discount_value + '%' : '$' + fmt(c.discount_value)"></td>
+            <td x-text="(c.uses_count ?? 0) + (c.max_uses ? ' / ' + c.max_uses : '')"></td>
+            <td x-text="c.expires_at ? c.expires_at.split('T')[0] : '—'"></td>
+            <td>
+              <button @click="toggle(c)" class="badge" :class="c.is_active ? 'badge-green' : 'badge-grey'"
+                      x-text="c.is_active ? 'Activo' : 'Inactivo'" style="cursor:pointer;border:none"></button>
+            </td>
+            <td><button @click="openEdit(c)" class="text-xs text-pink-deep" style="background:none;border:none;cursor:pointer">Editar</button></td>
+          </tr>
+        </template>
+        <tr x-show="!loading && coupons.length===0"><td colspan="7" class="text-center py-10 text-brown-soft">Sin cupones.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Modal -->
+  <div x-show="modal !== null" @click.self="modal=null" x-transition
+       class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.4)">
+    <div class="w-full max-w-sm bg-white rounded-2xl" style="padding:28px;box-shadow:0 24px 60px rgba(58,36,23,0.18)" @click.stop>
+      <h2 class="font-fraunces font-bold text-brown mb-4" style="font-size:1.1rem" x-text="modal === 'new' ? 'Nuevo cupón' : 'Editar cupón'"></h2>
+      <div x-show="formError" x-text="formError" class="text-xs text-red-600 mb-3"></div>
+      <div class="space-y-3">
+        <input type="text" x-model="form.code" placeholder="Código (ej: PROMO20)" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none font-mono" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        <select x-model="form.discount_type" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff">
+          <option value="percentage">Porcentaje (%)</option>
+          <option value="fixed">Monto fijo ($)</option>
+        </select>
+        <input type="number" x-model="form.discount_value" :placeholder="form.discount_type === 'percentage' ? 'Valor % (ej: 20)' : 'Monto fijo (ej: 500)'" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        <input type="number" x-model="form.min_subtotal" placeholder="Subtotal mínimo (opcional)" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        <input type="number" x-model="form.max_uses" placeholder="Usos máximos (opcional)" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        <input type="date" x-model="form.expires_at" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff">
+        <label class="flex items-center gap-2 text-sm text-brown-soft cursor-pointer">
+          <input type="checkbox" x-model="form.is_active" class="rounded"> Activo
+        </label>
+      </div>
+      <div class="flex gap-3 mt-5">
+        <button @click="modal=null" class="flex-1 text-sm font-semibold py-2.5 rounded-xl" style="background:#F6EAD6;color:#5A3B29;border:none;cursor:pointer">Cancelar</button>
+        <button @click="save()" :disabled="saving" class="flex-1 text-sm font-semibold text-white py-2.5 rounded-xl disabled:opacity-50" :style="saving ? 'background:rgba(226,133,175,0.6);border:none;cursor:not-allowed' : 'background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none;cursor:pointer'" x-text="saving ? 'Guardando...' : 'Guardar'"></button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

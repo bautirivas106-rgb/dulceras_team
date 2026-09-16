@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Pago pendiente — Dulceras Team{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-cream flex items-center justify-center px-4">
+  <div class="max-w-md w-full text-center">
+
+    <div class="w-24 h-24 bg-amber-100 rounded-full flex items-center justify-center text-5xl mx-auto mb-6">
+      ⏳
+    </div>
+
+    <h1 class="text-2xl font-bold font-fraunces text-chocolate mb-2">Pago pendiente de acreditación</h1>
+    <p class="text-[#7C4A2D] mb-2">
+      Tu pago para el pedido
+      {% if order_id %}<strong class="text-chocolate">#{{ order_id }}</strong>{% endif %}
+      está en proceso de acreditación.
+    </p>
+    <p class="text-sm text-[#A0673A] mb-8">
+      Esto puede demorar algunas horas dependiendo del medio de pago. Cuando se acredite,
+      tu pedido pasará automáticamente a producción.
+    </p>
+
+    <div class="bg-cream-dark rounded-2xl p-5 mb-6 text-left">
+      <p class="font-semibold text-chocolate text-sm mb-2">¿Qué hacer?</p>
+      <ul class="space-y-1.5 text-sm text-[#7C4A2D]">
+        <li class="flex gap-2"><span class="text-rose">•</span> No volvás a pagar — el pedido ya existe.</li>
+        <li class="flex gap-2"><span class="text-rose">•</span> Si pagaste con transferencia bancaria, puede demorar hasta 72hs.</li>
+        <li class="flex gap-2"><span class="text-rose">•</span> Ante cualquier duda, escribinos por WhatsApp.</li>
+      </ul>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <a href="https://wa.me/5491100000000?text=Hola!+El+pago+del+pedido+%23{{ order_id }}+qued%C3%B3+pendiente"
+         target="_blank" rel="noopener noreferrer"
+         class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3.5 rounded-full text-center transition-colors">
+        💬 Consultar por WhatsApp
+      </a>
+      <a href="/"
+         class="w-full border-2 border-caramel text-[#7C4A2D] font-semibold py-3.5 rounded-full text-center hover:bg-cream-dark transition-colors">
+        Volver al inicio
+      </a>
+    </div>
+
+    <p class="text-xs text-[#C4A882] mt-6">🐱 Gracias por tu pedido. Ayudaste a un gatito hoy.</p>
+  </div>
+</div>
+{% endblock %}

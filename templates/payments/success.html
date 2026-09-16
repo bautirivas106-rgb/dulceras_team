@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Pago confirmado — Dulceras Team{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-cream flex items-center justify-center px-4">
+  <div class="max-w-md w-full text-center" id="payment-status-root">
+
+    <!-- Estado: cargando (inicial) -->
+    <div id="state-loading">
+      <div class="w-16 h-16 border-4 border-rose border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+      <p class="text-[#7C4A2D] font-medium">Confirmando tu pago...</p>
+    </div>
+
+    <!-- Estado: aprobado -->
+    <div id="state-approved" class="hidden animate-fade-in">
+      <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center text-5xl mx-auto mb-6">
+        🎉
+      </div>
+      <h1 class="text-2xl font-bold font-fraunces text-chocolate mb-2">¡Seña confirmada!</h1>
+      <p class="text-[#7C4A2D] mb-2">
+        Tu pago fue aprobado. El pedido <strong class="text-chocolate">#<span class="order-id-placeholder"></span></strong> ya está en producción.
+      </p>
+      <p class="text-sm text-[#A0673A] mb-8">
+        Te avisamos por WhatsApp cuando esté listo para retirar o entregarte.
+      </p>
+      <div class="bg-cream-dark rounded-2xl p-5 mb-6 text-left">
+        <p class="font-semibold text-chocolate text-sm mb-2">¿Qué sigue?</p>
+        <ol class="space-y-1.5 text-sm text-[#7C4A2D]">
+          <li class="flex gap-2"><span class="text-rose font-bold">1.</span> Confirmamos tu pedido por WhatsApp.</li>
+          <li class="flex gap-2"><span class="text-rose font-bold">2.</span> Lo preparamos con amor y cariño. 🍪</li>
+          <li class="flex gap-2"><span class="text-rose font-bold">3.</span> Te avisamos cuando esté listo.</li>
+        </ol>
+      </div>
+      <a href="/" class="block w-full bg-rose hover:bg-[#d9768a] text-white font-bold py-3.5 rounded-full text-center transition-colors">
+        Volver al inicio
+      </a>
+      <p class="text-xs text-[#C4A882] mt-4">🐱 Gracias por tu pedido. Ayudaste a un gatito hoy.</p>
+    </div>
+
+    <!-- Estado: pendiente / otro -->
+    <div id="state-pending" class="hidden animate-fade-in">
+      <div class="w-24 h-24 bg-amber-100 rounded-full flex items-center justify-center text-5xl mx-auto mb-6">
+        ⏳
+      </div>
+      <h1 class="text-2xl font-bold font-fraunces text-chocolate mb-2">Pago en proceso</h1>
+      <p class="text-[#7C4A2D] mb-8">
+        Tu pago está siendo procesado. Cuando se confirme, el pedido
+        <strong>#<span class="order-id-placeholder"></span></strong> pasará a producción automáticamente.
+      </p>
+      <a id="wa-link-pending" href="#"
+         target="_blank" rel="noopener noreferrer"
+         class="block w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3.5 rounded-full text-center transition-colors mb-3">
+        💬 Consultar por WhatsApp
+      </a>
+      <a href="/" class="block w-full border-2 border-caramel text-[#7C4A2D] font-semibold py-3.5 rounded-full text-center hover:bg-cream-dark transition-colors">
+        Volver al inicio
+      </a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const params   = new URLSearchParams(location.search)
+  const orderId  = params.get('order_id')
+  const tenant   = window.DULCERAS.tenant
+
+  // Rellena los spans con el número de pedido
+  document.querySelectorAll('.order-id-placeholder').forEach(el => el.textContent = orderId || '?')
+
+  // WhatsApp link dinámico
+  const waLink = document.getElementById('wa-link-pending')
+  if (waLink) waLink.href = `https://wa.me/5491100000000?text=Hola!+Hice+el+pedido+%23${orderId}+y+el+pago+qued%C3%B3+pendiente`
+
+  function show(stateId) {
+    ['state-loading', 'state-approved', 'state-pending'].forEach(id => {
+      document.getElementById(id).classList.toggle('hidden', id !== stateId)
+    })
+  }
+
+  if (!orderId) { show('state-pending'); return }
+
+  let attempts = 0
+  async function checkStatus() {
+    try {
+      const res  = await fetch(`/api/public/${tenant}/payments/orders/${orderId}/status/`)
+      const data = await res.json()
+      if (data.status === 'approved') {
+        show('state-approved')
+      } else if (data.status === 'pending' && attempts < 3) {
+        attempts++
+        setTimeout(checkStatus, 2000)
+      } else {
+        show('state-pending')
+      }
+    } catch {
+      show('state-pending')
+    }
+  }
+
+  checkStatus()
+})()
+</script>
+{% endblock %}

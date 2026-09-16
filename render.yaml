@@ -1,0 +1,35 @@
+databases:
+  - name: dulceras-db
+    databaseName: dulceras
+    user: dulceras
+    plan: free
+    region: oregon
+
+services:
+  - type: web
+    name: dulceras-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    branch: main
+    healthCheckPath: /admin/login/
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dulceras-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://dulceras-team.netlify.app"
+      - key: FRONTEND_URL
+        value: "https://dulceras-team.netlify.app"
+      - key: MERCADOPAGO_ACCESS_TOKEN
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        value: "noreply@dulcerasteam.com"
