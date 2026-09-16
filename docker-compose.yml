@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: dulceras_db
+      POSTGRES_USER: dulceras
+      POSTGRES_PASSWORD: dulceras_pass
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dulceras -d dulceras_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgres://dulceras:dulceras_pass@db:5432/dulceras_db
+      SECRET_KEY: local-docker-dev-secret-key-not-for-production
+      DEBUG: "True"
+      ALLOWED_HOSTS: "localhost,127.0.0.1,0.0.0.0"
+      CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173"
+      FRONTEND_URL: "http://localhost:5173"
+      MERCADOPAGO_ACCESS_TOKEN: ""
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - media_data:/app/media
+    restart: on-failure
+
+volumes:
+  media_data:

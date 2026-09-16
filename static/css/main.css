@@ -1,0 +1,160 @@
+@font-face {
+  font-family: 'Adelline';
+  src: url('/static/fonts/adelline.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Design tokens ────────────────────────────────────────────────────────── */
+:root {
+  --color-cream:       #FDF6EC;
+  --color-cream-2:     #F6EAD6;
+  --color-cream-dark:  #F5E8D0;
+  --color-pink:        #F0A0C4;
+  --color-pink-deep:   #E285AF;
+  --color-brown:       #3A2417;
+  --color-brown-soft:  #5A3B29;
+  --color-tostado:     #EFE2CB;
+  --color-chocolate:   #3D1A0E;
+  --color-rose:        #E8889A;
+  --color-caramel:     #D4A76A;
+
+  --font-fraunces: 'Fraunces', Georgia, serif;
+  --font-poppins:  'Poppins', system-ui, sans-serif;
+  --font-caveat:   'Caveat', cursive;
+  --font-adelline: 'Adelline', Georgia, serif;
+}
+
+/* ── Reset base ───────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background-color: var(--color-cream);
+  font-family: var(--font-poppins);
+  color: var(--color-brown);
+}
+
+html { scroll-behavior: smooth; }
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes marquee-reverse {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}
+@keyframes aurora-move {
+  from { background-position: 50% 50%, 50% 50%; }
+  to   { background-position: 350% 50%, 350% 50%; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Utility classes ──────────────────────────────────────────────────────── */
+.font-fraunces { font-family: var(--font-fraunces); }
+.font-poppins  { font-family: var(--font-poppins); }
+.font-caveat   { font-family: var(--font-caveat); }
+
+.text-brown      { color: var(--color-brown); }
+.text-brown-soft { color: var(--color-brown-soft); }
+.text-pink-deep  { color: var(--color-pink-deep); }
+
+.bg-cream   { background-color: var(--color-cream); }
+.bg-cream-2 { background-color: var(--color-cream-2); }
+
+.animate-spin    { animation: spin 1s linear infinite; }
+.animate-pulse   { animation: pulse 1.5s ease-in-out infinite; }
+.animate-fade-in { animation: fade-in 0.4s ease both; }
+
+/* ── Rotating border (outline buttons) ───────────────────────────────────── */
+@property --angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes rotate-border { to { --angle: 360deg; } }
+
+.btn-animated-border { position: relative; }
+.btn-animated-border::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(from var(--angle), transparent 0%, #E285AF 12%, transparent 26%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: rotate-border 4s linear infinite;
+  pointer-events: none;
+}
+
+/* ── Nav animated underline ──────────────────────────────────────────────── */
+.nav-underline { position: relative; padding-bottom: 4px; }
+.nav-underline::after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: 0;
+  width: 0; height: 2px;
+  background: #E285AF;
+  transition: width 0.25s ease;
+}
+.nav-underline:hover::after { width: 100%; }
+
+/* ── Marquee ─────────────────────────────────────────────────────────────── */
+.animate-marquee         { animation: marquee 30s linear infinite; }
+.animate-marquee-reverse { animation: marquee-reverse 30s linear infinite; }
+
+/* ── Gradient button (from original design) ──────────────────────────────── */
+@property --pos-x        { syntax: '<percentage>'; initial-value: 11.14%;  inherits: false; }
+@property --pos-y        { syntax: '<percentage>'; initial-value: 140%;    inherits: false; }
+@property --spread-x     { syntax: '<percentage>'; initial-value: 150%;    inherits: false; }
+@property --spread-y     { syntax: '<percentage>'; initial-value: 180.06%; inherits: false; }
+@property --color-1      { syntax: '<color>'; initial-value: #3D1A0E; inherits: false; }
+@property --color-2      { syntax: '<color>'; initial-value: #6D1B3E; inherits: false; }
+@property --color-3      { syntax: '<color>'; initial-value: #BC0070; inherits: false; }
+@property --color-4      { syntax: '<color>'; initial-value: #D4558F; inherits: false; }
+@property --color-5      { syntax: '<color>'; initial-value: #ED58AA; inherits: false; }
+@property --border-angle { syntax: '<angle>';      initial-value: 20deg;   inherits: true; }
+@property --border-color-1 { syntax: '<color>'; initial-value: hsla(330,75%,60%,0.2); inherits: true; }
+@property --border-color-2 { syntax: '<color>'; initial-value: hsla(330,75%,40%,0.75); inherits: true; }
+@property --stop-1 { syntax: '<percentage>'; initial-value: 37.35%; inherits: false; }
+@property --stop-2 { syntax: '<percentage>'; initial-value: 61.36%; inherits: false; }
+@property --stop-3 { syntax: '<percentage>'; initial-value: 78.42%; inherits: false; }
+@property --stop-4 { syntax: '<percentage>'; initial-value: 89.52%; inherits: false; }
+@property --stop-5 { syntax: '<percentage>'; initial-value: 100%;   inherits: false; }
+
+.gradient-button {
+  position: relative;
+  appearance: none;
+  cursor: pointer;
+  background: radial-gradient(
+    var(--spread-x) var(--spread-y) at var(--pos-x) var(--pos-y),
+    var(--color-1) var(--stop-1), var(--color-2) var(--stop-2),
+    var(--color-3) var(--stop-3), var(--color-4) var(--stop-4),
+    var(--color-5) var(--stop-5)
+  );
+  transition:
+    --pos-x .5s, --pos-y .5s, --spread-x .5s, --spread-y .5s,
+    --color-1 .5s, --color-2 .5s, --color-3 .5s, --color-4 .5s, --color-5 .5s,
+    --border-angle .5s, --border-color-1 .5s, --border-color-2 .5s,
+    --stop-1 .5s, --stop-2 .5s, --stop-3 .5s, --stop-4 .5s, --stop-5 .5s;
+}
+.gradient-button-pink {
+  --color-1: #3D1A0E; --color-2: #6D1B3E; --color-3: #BC0070;
+  --color-4: #D4558F; --color-5: #ED58AA;
+}
+.gradient-button-pink:hover {
+  --pos-x: 0%; --pos-y: 91.51%; --spread-x: 120%; --spread-y: 103%;
+  --color-1: #ED58AA; --color-2: #D4758A; --color-3: #C47A3E;
+  --color-4: #7C2D12; --color-5: #3D1A0E;
+}
