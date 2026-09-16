@@ -4,7 +4,13 @@ from .views import (
     PublicCouponValidateView, PublicDateAvailabilityView,
     PublicOrderCreateView, PublicOrderDetailView,
     AdminCouponViewSet, AdminOrderViewSet,
+    order_confirmation,
 )
+
+# URL patterns para las páginas HTML (template views)
+template_urlpatterns = [
+    path('pedido/<int:order_id>/', order_confirmation, name='order-confirmation'),
+]
 
 public_urlpatterns = [
     path('<slug:tenant_slug>/orders/', PublicOrderCreateView.as_view(), name='public-order-create'),

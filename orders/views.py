@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDate
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -13,6 +13,20 @@ from rest_framework.views import APIView
 
 from tenants.models import Tenant
 from .models import Coupon, Order, OrderItem, OrderStatusHistory
+
+
+# ── Template views ────────────────────────────────────────────────────────────
+
+def order_confirmation(request, order_id):
+    """Página de confirmación post-checkout. Sirve el pedido directo desde la DB."""
+    order = get_object_or_404(
+        Order.objects.prefetch_related('items'),
+        pk=order_id,
+    )
+    return render(request, 'orders/confirmation.html', {
+        'order': order,
+        'is_paid': order.status != Order.PENDING_DEPOSIT,
+    })
 from .serializers import (
     CouponSerializer, OrderCreateSerializer, OrderDetailSerializer,
     OrderListSerializer, OrderStatusUpdateSerializer,

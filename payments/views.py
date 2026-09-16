@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -12,6 +12,20 @@ from tenants.models import Tenant
 from .models import PaymentIntent, WebhookEvent
 from .serializers import PaymentIntentSerializer, WebhookEventSerializer
 from .services import build_mp_preference, get_mp_sdk
+
+
+# ── Template views ────────────────────────────────────────────────────────────
+
+def payment_success(request):
+    return render(request, 'payments/success.html')
+
+def payment_failure(request):
+    order_id = request.GET.get('order_id', '')
+    return render(request, 'payments/failure.html', {'order_id': order_id})
+
+def payment_pending(request):
+    order_id = request.GET.get('order_id', '')
+    return render(request, 'payments/pending.html', {'order_id': order_id})
 
 
 # ── Público ───────────────────────────────────────────────────────────────────

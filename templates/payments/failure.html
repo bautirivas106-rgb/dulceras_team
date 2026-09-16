@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Pago no completado — Dulceras Team{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-cream flex items-center justify-center px-4">
+  <div class="max-w-md w-full text-center">
+
+    <div class="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center text-5xl mx-auto mb-6">
+      😔
+    </div>
+
+    <h1 class="text-2xl font-bold font-fraunces text-chocolate mb-2">El pago no se completó</h1>
+    <p class="text-[#7C4A2D] mb-2">
+      {% if order_id %}
+        Tu pedido <strong class="text-chocolate">#{{ order_id }}</strong> está guardado,
+      {% else %}
+        Tu pedido está guardado,
+      {% endif %}
+      pero la seña no fue procesada.
+    </p>
+    <p class="text-sm text-[#A0673A] mb-8">
+      Podés intentarlo de nuevo o contactarnos por WhatsApp para coordinar otro método de pago.
+    </p>
+
+    <div class="flex flex-col gap-3">
+      {% if order_id %}
+        <a href="/pedido/{{ order_id }}/"
+           class="w-full bg-rose hover:bg-[#d9768a] text-white font-bold py-3.5 rounded-full text-center transition-colors">
+          Volver al pedido e intentar de nuevo
+        </a>
+      {% endif %}
+      <a href="https://wa.me/5491100000000?text=Hola!+Intent%C3%A9+pagar+el+pedido+%23{{ order_id }}+y+no+me+funcion%C3%B3"
+         target="_blank" rel="noopener noreferrer"
+         class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3.5 rounded-full text-center transition-colors">
+        💬 Consultar por WhatsApp
+      </a>
+      <a href="/"
+         class="w-full border-2 border-caramel text-[#7C4A2D] font-semibold py-3.5 rounded-full text-center hover:bg-cream-dark transition-colors">
+        Volver al inicio
+      </a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
