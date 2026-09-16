@@ -25,9 +25,8 @@ env-mvt/
 venv/
 .venv/
 
-# Node
-frontend/node_modules/
-frontend/dist/
+# Node / Frontend (migrado a Django templates)
+frontend/
 
 # IDE
 .vscode/
