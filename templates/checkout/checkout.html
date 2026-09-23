@@ -62,8 +62,8 @@
          /* Load zones + availability */
          try {
            const [zonesRes, availRes] = await Promise.all([
-             fetch('/api/public/dulceras-team/orders/delivery-zones/'),
-             fetch('/api/public/dulceras-team/orders/date-availability/'),
+             fetch('/api/public/dulceras-team/delivery-zones/'),
+             fetch('/api/public/dulceras-team/calendar/availability/'),
            ])
            if (zonesRes.ok) this.zones = await zonesRes.json()
            if (availRes.ok) {
