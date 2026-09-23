@@ -12,7 +12,7 @@
     const params = new URLSearchParams({ page: this.page, page_size: this.pageSize })
     if (this.search) params.set('search', this.search)
     try {
-      const res = await fetch('/api/admin/customers/customers/?' + params, { headers: $store.adminAuth.headers() })
+      const res = await fetch('/api/admin/customers/?' + params, { headers: $store.adminAuth.headers() })
       if (res.ok) { const d = await res.json(); this.customers = d.results ?? d; this.totalCount = d.count ?? (d.results ? d.count : d.length) }
     } catch {}
     this.loading = false

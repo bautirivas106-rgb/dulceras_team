@@ -9,7 +9,7 @@
   async load() {
     this.loading = true
     try {
-      const res = await fetch('/api/admin/orders/reports/summary/?days=' + this.period, { headers: $store.adminAuth.headers() })
+      const res = await fetch('/api/admin/orders/reports/?days=' + this.period, { headers: $store.adminAuth.headers() })
       if (res.ok) this.data = await res.json()
     } catch {}
     this.loading = false

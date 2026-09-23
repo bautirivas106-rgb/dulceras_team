@@ -10,7 +10,7 @@
 
   async load() {
     try {
-      const res = await fetch('/api/admin/tenants/profile/', { headers: $store.adminAuth.headers() })
+      const res = await fetch('/api/admin/settings/', { headers: $store.adminAuth.headers() })
       if (res.ok) {
         this.profile = await res.json()
         this.form = {
@@ -29,7 +29,7 @@
   async save() {
     this.saving = true; this.error = ''; this.saved = false
     try {
-      const res = await fetch('/api/admin/tenants/profile/', {
+      const res = await fetch('/api/admin/settings/', {
         method: 'PATCH', headers: $store.adminAuth.headers(), body: JSON.stringify(this.form)
       })
       if (res.ok) { this.profile = await res.json(); this.saved = true; setTimeout(() => this.saved = false, 2500) }

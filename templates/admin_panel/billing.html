@@ -8,7 +8,7 @@
   sub: null, loading: true,
   async init() {
     try {
-      const res = await fetch('/api/admin/tenants/subscription/', { headers: $store.adminAuth.headers() })
+      const res = await fetch('/api/admin/billing/', { headers: $store.adminAuth.headers() })
       if (res.ok) this.sub = await res.json()
     } catch {}
     this.loading = false
