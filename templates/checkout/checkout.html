@@ -383,7 +383,7 @@
             </div>
             <div x-show="form.delivery_method === 'delivery'" class="flex justify-between text-brown-soft">
               <span>Delivery</span>
-              <span x-text="deliveryCost > 0 ? '$' + fmt(deliveryCost) : 'Elegí zona'"></span>
+              <span x-text="selectedZone ? (deliveryCost > 0 ? '$' + fmt(deliveryCost) : 'Gratis') : 'Elegí zona'"></span>
             </div>
             <div x-show="discount > 0" class="flex justify-between font-semibold" style="color:#27AE60">
               <span x-text="'Descuento (' + (coupon?.code ?? '') + ')'"></span>
