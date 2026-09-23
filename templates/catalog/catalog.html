@@ -20,7 +20,9 @@
       <div class="flex items-center gap-3">
         <a href="/" class="text-sm font-medium no-underline transition-opacity hover:opacity-70" style="color:#E285AF">← Inicio</a>
         <button @click="cartOpen=true" class="relative flex items-center justify-center rounded-full"
-                style="width:40px;height:40px;background:rgba(58,36,23,0.06);color:#5A3B29;border:none;cursor:pointer">
+                style="width:40px;height:40px;background:rgba(58,36,23,0.06);color:#5A3B29;border:none;cursor:pointer;transition:transform 0.2s,background 0.2s"
+                onmouseenter="this.style.transform='scale(1.1)';this.style.background='rgba(58,36,23,0.12)'"
+                onmouseleave="this.style.transform='';this.style.background='rgba(58,36,23,0.06)'">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
           <span x-show="$store.cart.count > 0" x-text="$store.cart.count"
                 class="absolute -top-1.5 -right-1.5 flex items-center justify-center text-white font-bold rounded-full"
@@ -132,15 +134,15 @@
              name: '{{ product.name|escapejs }}',
              description: '{{ product.description|escapejs }}',
              category: '{% if product.category %}{{ product.category.name|escapejs }}{% endif %}',
-             imageUrl: '{{ product.image_url|default:''|escapejs }}',
+             imageUrl: '{% if product.image %}{{ product.image.url|escapejs }}{% endif %}',
              variants: [{% for v in product.active_variants %}{ id: {{ v.id }}, name: '{{ v.name|escapejs }}', price: {{ v.price }} }{% if not forloop.last %},{% endif %}{% endfor %}]
            }"
            onmouseenter="this.style.transform='translateY(-4px)';this.style.boxShadow='0 12px 32px rgba(58,36,23,0.1)'"
            onmouseleave="this.style.transform='';this.style.boxShadow='0 4px 20px rgba(58,36,23,0.06)'">
         <!-- Image -->
         <div style="height:220px;background:{% cycle 'linear-gradient(135deg,#EFE2CB,#F0A0C4)' 'linear-gradient(135deg,#F4BDE0,#E285AF)' 'linear-gradient(135deg,#F6EAD6,#EFE2CB)' 'linear-gradient(135deg,#F0A0C4,#F6EAD6)' 'linear-gradient(135deg,#EFE2CB,#F4BDE0)' 'linear-gradient(135deg,#E285AF,#EFE2CB)' %};overflow:hidden">
-          {% if product.image_url %}
-          <img src="{{ product.image_url }}" alt="{{ product.name }}" style="width:100%;height:100%;object-fit:cover;display:block">
+          {% if product.image %}
+          <img src="{{ product.image.url }}" alt="{{ product.name }}" style="width:100%;height:100%;object-fit:cover;display:block">
           {% endif %}
         </div>
         <!-- Body -->

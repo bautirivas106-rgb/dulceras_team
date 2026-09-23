@@ -96,7 +96,7 @@
           <template x-for="p in products" :key="p.id">
             <tr>
               <td class="font-medium text-brown" x-text="p.name"></td>
-              <td x-text="p.category?.name ?? '—'"></td>
+              <td x-text="p.category_name ?? '—'"></td>
               <td x-text="p.variants?.length ?? 0"></td>
               <td>
                 <button @click="toggleProduct(p)" class="badge" :class="p.is_active ? 'badge-green' : 'badge-grey'"
