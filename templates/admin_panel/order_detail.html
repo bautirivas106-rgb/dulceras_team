@@ -21,7 +21,7 @@
 
   async init() {
     try {
-      const res = await fetch('/api/admin/orders/orders/{{ order_id }}/', { headers: $store.adminAuth.headers() })
+      const res = await fetch('/api/admin/orders/{{ order_id }}/', { headers: $store.adminAuth.headers() })
       if (res.ok) this.order = await res.json()
     } catch {}
     this.loading = false
@@ -31,7 +31,7 @@
     if (!this.newStatus || this.newStatus === this.order?.status) return
     this.statusLoading = true
     try {
-      const res = await fetch('/api/admin/orders/orders/{{ order_id }}/', {
+      const res = await fetch('/api/admin/orders/{{ order_id }}/', {
         method: 'PATCH',
         headers: $store.adminAuth.headers(),
         body: JSON.stringify({ status: this.newStatus })

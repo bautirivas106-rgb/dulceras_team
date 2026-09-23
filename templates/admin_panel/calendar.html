@@ -30,7 +30,7 @@
   async load() {
     this.loading = true
     try {
-      const res = await fetch('/api/admin/orders/orders/?page_size=200', { headers: $store.adminAuth.headers() })
+      const res = await fetch('/api/admin/orders/?page_size=200', { headers: $store.adminAuth.headers() })
       if (res.ok) { const d = await res.json(); this.orders = d.results ?? d }
     } catch {}
     this.loading = false

@@ -15,7 +15,7 @@
     if (this.search) params.set('search', this.search)
     if (this.statusFilter) params.set('status', this.statusFilter)
     try {
-      const res = await fetch('/api/admin/orders/orders/?' + params, { headers: $store.adminAuth.headers() })
+      const res = await fetch('/api/admin/orders/?' + params, { headers: $store.adminAuth.headers() })
       if (res.ok) {
         const d = await res.json()
         if (Array.isArray(d)) { this.orders = d; this.totalCount = d.length }
