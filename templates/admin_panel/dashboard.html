@@ -11,7 +11,7 @@
   async init() {
     try {
       const [statsRes, ordersRes] = await Promise.all([
-        fetch('/api/admin/dashboard/stats/', { headers: $store.adminAuth.headers() }),
+        fetch('/api/admin/orders/stats/', { headers: $store.adminAuth.headers() }),
         fetch('/api/admin/orders/?page_size=5', { headers: $store.adminAuth.headers() }),
       ])
       if (statsRes.ok) this.stats = await statsRes.json()
@@ -47,7 +47,7 @@
     </div>
     <div class="stat-card">
       <p class="text-xs font-semibold uppercase tracking-wide text-brown-soft mb-1">Ingresos este mes</p>
-      <p class="font-fraunces font-bold text-brown" style="font-size:1.8rem" x-text="loading ? '—' : '$' + fmt(stats?.revenue_month ?? 0)"></p>
+      <p class="font-fraunces font-bold text-brown" style="font-size:1.8rem" x-text="loading ? '—' : '$' + fmt(stats?.monthly_revenue ?? 0)"></p>
     </div>
     <div class="stat-card">
       <p class="text-xs font-semibold uppercase tracking-wide text-brown-soft mb-1">Clientes totales</p>

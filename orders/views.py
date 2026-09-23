@@ -219,12 +219,15 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
             created_at__year=today.year,
             created_at__month=today.month,
         )
+        from customers.models import Customer
         return Response({
             'pending_deposit': qs.filter(status='pending_deposit').count(),
             'deposit_paid': qs.filter(status='deposit_paid').count(),
             'active': qs.filter(status__in=active).count(),
             'today_orders': qs.filter(required_date=today).count(),
+            'orders_month': qs.filter(created_at__year=today.year, created_at__month=today.month).count(),
             'monthly_revenue': float(revenue_qs.aggregate(t=Sum('total'))['t'] or 0),
+            'total_customers': Customer.objects.filter(tenant=request.user.tenant).count(),
         })
 
     @action(detail=True, methods=['patch'], url_path='status')
