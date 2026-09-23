@@ -26,7 +26,7 @@
        async loadOrders() {
          this.loading = true
          try {
-           const res = await fetch('/api/public/{{ tenant_slug }}/customers/orders/', {
+           const res = await fetch('/api/public/{{ tenant_slug }}/customers/me/orders/', {
              headers: $store.customerAuth.headers()
            })
            if (res.status === 401) { $store.customerAuth.logout(); return }
@@ -52,7 +52,7 @@
          this.editError = ''
          this.editSuccess = ''
          try {
-           const res = await fetch('/api/public/{{ tenant_slug }}/customers/profile/', {
+           const res = await fetch('/api/public/{{ tenant_slug }}/customers/me/', {
              method: 'PATCH',
              headers: $store.customerAuth.headers(),
              body: JSON.stringify(this.editForm)
