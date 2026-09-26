@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 from .views import (
-    AdminCustomerViewSet,
+    AdminCustomerViewSet, AdminReviewViewSet,
     CustomerRegisterView, CustomerLoginView,
     CustomerProfileView, CustomerOrdersView,
     ReviewListView, CustomerReviewCreateView,
@@ -10,7 +10,11 @@ from .views import (
 router = DefaultRouter()
 router.register('', AdminCustomerViewSet, basename='admin-customers')
 
+reviews_router = DefaultRouter()
+reviews_router.register('', AdminReviewViewSet, basename='admin-reviews')
+
 admin_urlpatterns = router.urls
+admin_review_urlpatterns = reviews_router.urls
 
 public_urlpatterns = [
     path('<slug:tenant_slug>/customers/register/', CustomerRegisterView.as_view(), name='customer-register'),

@@ -71,3 +71,9 @@ class ReviewPublicSerializer(serializers.ModelSerializer):
 class ReviewCreateSerializer(serializers.Serializer):
     rating = serializers.IntegerField(min_value=1, max_value=5)
     text = serializers.CharField(min_length=5, max_length=1000)
+
+
+class AdminReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ('id', 'author_name', 'rating', 'text', 'is_approved', 'created_at')

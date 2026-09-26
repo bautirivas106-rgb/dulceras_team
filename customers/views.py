@@ -17,7 +17,7 @@ from .serializers import (
     CustomerAddressSerializer, CustomerAddressWriteSerializer,
     CustomerPublicRegisterSerializer, CustomerPublicProfileSerializer,
     CustomerPublicProfileUpdateSerializer,
-    ReviewPublicSerializer, ReviewCreateSerializer,
+    ReviewPublicSerializer, ReviewCreateSerializer, AdminReviewSerializer,
 )
 
 
@@ -194,6 +194,22 @@ class CustomerReviewCreateView(APIView):
             text=serializer.validated_data['text'],
         )
         return Response(ReviewPublicSerializer(review).data, status=status.HTTP_201_CREATED)
+
+
+class AdminReviewViewSet(TenantFilterMixin, viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = AdminReviewSerializer
+    http_method_names = ['get', 'patch', 'head', 'options']
+    queryset = Review.objects.all().order_by('-created_at')
+
+    def partial_update(self, request, *args, **kwargs):
+        review = self.get_object()
+        approved = request.data.get('is_approved')
+        if approved is None:
+            return Response({'detail': 'Campo is_approved requerido.'}, status=400)
+        review.is_approved = bool(approved)
+        review.save(update_fields=['is_approved'])
+        return Response(AdminReviewSerializer(review).data)
 
 
 class AdminCustomerViewSet(TenantFilterMixin, viewsets.ModelViewSet):

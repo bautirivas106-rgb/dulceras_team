@@ -133,6 +133,10 @@ def admin_coupons(request):
     return render(request, 'admin_panel/coupons.html')
 
 
+def admin_reviews(request):
+    return render(request, 'admin_panel/reviews.html')
+
+
 # ── Superadmin ─────────────────────────────────────────────────────────────────
 
 def superadmin_metrics(request):

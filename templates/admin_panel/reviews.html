@@ -1,0 +1,120 @@
+{% extends "admin_panel/base.html" %}
+{% block title %}Reseñas — Panel{% endblock %}
+{% block nav_reviews %}active{% endblock %}
+{% block page_title %}Reseñas{% endblock %}
+
+{% block page_content %}
+<div x-data="{
+  reviews: [],
+  loading: true,
+  toggling: {},
+
+  async load() {
+    try {
+      const res = await fetch('/api/admin/reviews/', { headers: $store.adminAuth.headers() })
+      if (res.status === 401) { $store.adminAuth.logout(); return }
+      if (res.ok) this.reviews = await res.json()
+    } catch {}
+    this.loading = false
+  },
+
+  async toggle(r) {
+    this.toggling[r.id] = true
+    try {
+      const res = await fetch(`/api/admin/reviews/${r.id}/`, {
+        method: 'PATCH',
+        headers: $store.adminAuth.headers(),
+        body: JSON.stringify({ is_approved: !r.is_approved })
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        const idx = this.reviews.findIndex(x => x.id === r.id)
+        if (idx !== -1) this.reviews[idx] = updated
+      }
+    } catch {}
+    this.toggling[r.id] = false
+  },
+
+  stars(n) { return '★'.repeat(n) + '☆'.repeat(5 - n) },
+
+  fmtDate(d) {
+    if (!d) return ''
+    const dt = new Date(d)
+    return dt.toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric' })
+  },
+}" x-init="load()">
+
+  <!-- Header stats -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05);padding:18px 20px">
+      <p class="text-xs font-semibold uppercase tracking-wide text-brown-soft mb-1">Total</p>
+      <p class="font-fraunces font-bold text-brown" style="font-size:1.8rem" x-text="reviews.length"></p>
+    </div>
+    <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05);padding:18px 20px">
+      <p class="text-xs font-semibold uppercase tracking-wide text-brown-soft mb-1">Publicadas</p>
+      <p class="font-fraunces font-bold" style="font-size:1.8rem;color:#27AE60" x-text="reviews.filter(r => r.is_approved).length"></p>
+    </div>
+    <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05);padding:18px 20px">
+      <p class="text-xs font-semibold uppercase tracking-wide text-brown-soft mb-1">Ocultas</p>
+      <p class="font-fraunces font-bold" style="font-size:1.8rem;color:#C0392B" x-text="reviews.filter(r => !r.is_approved).length"></p>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div x-show="loading" class="flex justify-center py-16">
+    <div style="width:36px;height:36px;border:2px solid #EFE2CB;border-top-color:#E285AF;border-radius:50%;animation:spin 1s linear infinite"></div>
+  </div>
+
+  <!-- Empty -->
+  <div x-show="!loading && reviews.length === 0" class="text-center py-16">
+    <p class="font-fraunces font-bold text-brown text-lg mb-1">Sin reseñas todavía</p>
+    <p class="text-brown-soft text-sm">Las reseñas de los clientes aparecerán acá.</p>
+  </div>
+
+  <!-- Reviews list -->
+  <div x-show="!loading && reviews.length > 0" class="space-y-3">
+    <template x-for="r in reviews" :key="r.id">
+      <div class="bg-white rounded-2xl transition-all"
+           style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05);padding:18px 20px"
+           :style="!r.is_approved ? 'opacity:0.6' : ''">
+        <div class="flex items-start gap-4">
+
+          <!-- Avatar -->
+          <div class="flex-shrink-0 flex items-center justify-center rounded-full font-bold text-white text-sm"
+               style="width:40px;height:40px;background:linear-gradient(135deg,#F0A0C4,#E285AF)">
+            <span x-text="(r.author_name ?? 'A')[0].toUpperCase()"></span>
+          </div>
+
+          <!-- Content -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap mb-1">
+              <p class="font-semibold text-brown text-sm" x-text="r.author_name"></p>
+              <span class="text-xs" style="color:#E285AF;letter-spacing:0.02em" x-text="stars(r.rating)"></span>
+              <span class="text-xs text-brown-soft" x-text="fmtDate(r.created_at)"></span>
+              <span x-show="!r.is_approved"
+                    class="text-xs font-semibold rounded-full px-2 py-0.5"
+                    style="background:rgba(192,57,43,0.1);color:#C0392B">Oculta</span>
+            </div>
+            <p class="text-sm text-brown-soft leading-relaxed" x-text="r.text"></p>
+          </div>
+
+          <!-- Toggle -->
+          <div class="flex-shrink-0">
+            <button @click="toggle(r)"
+                    :disabled="toggling[r.id]"
+                    class="text-xs font-semibold rounded-xl px-4 py-2 transition-all"
+                    :style="toggling[r.id]
+                      ? 'opacity:0.5;cursor:not-allowed;border:none;background:#F6EAD6;color:#9B8B7E'
+                      : r.is_approved
+                        ? 'background:rgba(192,57,43,0.08);color:#C0392B;border:none;cursor:pointer'
+                        : 'background:rgba(39,174,96,0.1);color:#27AE60;border:none;cursor:pointer'"
+                    x-text="toggling[r.id] ? '...' : r.is_approved ? 'Ocultar' : 'Publicar'">
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+</div>
+{% endblock %}
