@@ -31,7 +31,7 @@ class Review(TenantModel):
     author_name = models.CharField(max_length=200)
     rating = models.PositiveSmallIntegerField(default=5)
     text = models.TextField()
-    is_approved = models.BooleanField(default=True)
+    is_approved = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-created_at']

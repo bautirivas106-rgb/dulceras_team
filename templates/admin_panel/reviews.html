@@ -10,6 +10,7 @@
   toggling: {},
 
   async load() {
+    this.loading = true
     try {
       const res = await fetch('/api/admin/reviews/', { headers: $store.adminAuth.headers() })
       if (res.status === 401) { $store.adminAuth.logout(); return }
@@ -29,7 +30,7 @@
       if (res.ok) {
         const updated = await res.json()
         const idx = this.reviews.findIndex(x => x.id === r.id)
-        if (idx !== -1) this.reviews[idx] = updated
+        if (idx !== -1) this.reviews.splice(idx, 1, updated)
       }
     } catch {}
     this.toggling[r.id] = false
@@ -44,7 +45,23 @@
   },
 }" x-init="load()">
 
-  <!-- Header stats -->
+  <!-- Header stats + refresh -->
+  <div class="flex items-center justify-between mb-4">
+    <div x-show="!loading && reviews.filter(r => !r.is_approved).length > 0"
+         class="flex items-center gap-2 text-sm font-semibold rounded-xl px-3 py-1.5"
+         style="background:rgba(226,133,175,0.12);color:#C25D8A">
+      <span x-text="reviews.filter(r => !r.is_approved).length + ' pendiente' + (reviews.filter(r => !r.is_approved).length > 1 ? 's' : '') + ' de aprobación'"></span>
+    </div>
+    <div x-show="loading || reviews.filter(r => !r.is_approved).length === 0"></div>
+    <button @click="load()" :disabled="loading"
+            class="flex items-center gap-1.5 text-xs font-semibold rounded-xl px-3 py-1.5 transition-all"
+            style="background:#F6EAD6;color:#5A3B29;border:none;cursor:pointer"
+            :style="loading ? 'opacity:0.5;cursor:not-allowed' : ''">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.6"/></svg>
+      Actualizar
+    </button>
+  </div>
+
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
     <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05);padding:18px 20px">
       <p class="text-xs font-semibold uppercase tracking-wide text-brown-soft mb-1">Total</p>
@@ -55,8 +72,8 @@
       <p class="font-fraunces font-bold" style="font-size:1.8rem;color:#27AE60" x-text="reviews.filter(r => r.is_approved).length"></p>
     </div>
     <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05);padding:18px 20px">
-      <p class="text-xs font-semibold uppercase tracking-wide text-brown-soft mb-1">Ocultas</p>
-      <p class="font-fraunces font-bold" style="font-size:1.8rem;color:#C0392B" x-text="reviews.filter(r => !r.is_approved).length"></p>
+      <p class="text-xs font-semibold uppercase tracking-wide text-brown-soft mb-1">Pendientes</p>
+      <p class="font-fraunces font-bold" style="font-size:1.8rem;color:#E285AF" x-text="reviews.filter(r => !r.is_approved).length"></p>
     </div>
   </div>
 
@@ -93,7 +110,7 @@
               <span class="text-xs text-brown-soft" x-text="fmtDate(r.created_at)"></span>
               <span x-show="!r.is_approved"
                     class="text-xs font-semibold rounded-full px-2 py-0.5"
-                    style="background:rgba(192,57,43,0.1);color:#C0392B">Oculta</span>
+                    style="background:rgba(226,133,175,0.15);color:#C25D8A">Pendiente</span>
             </div>
             <p class="text-sm text-brown-soft leading-relaxed" x-text="r.text"></p>
           </div>
