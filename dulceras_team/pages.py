@@ -28,7 +28,7 @@ def landing(request):
             active = [v for v in p.variants.all() if v.is_active]
             prices = [float(v.price) for v in active if float(v.price) > 0]
             p.min_price = min(prices) if prices else None
-            p.has_stock = p.made_to_order or any(v.stock_quantity > 0 for v in active)
+            p.has_stock = any(v.stock_quantity > 0 for v in active)
         products = raw
         reviews = list(Review.objects.filter(tenant=tenant, is_approved=True)[:12])
     return render(request, 'landing/home.html', {'products': products, 'reviews': reviews})
@@ -52,7 +52,7 @@ def catalog(request):
             active = [v for v in all_variants if v.is_active]
             prices = [float(v.price) for v in active if float(v.price) > 0]
             p.min_price = min(prices) if prices else None
-            p.has_stock = p.made_to_order or any(v.stock_quantity > 0 for v in active)
+            p.has_stock = any(v.stock_quantity > 0 for v in active)
             # price as int avoids locale comma-decimal issue in Alpine JS expressions
             p.active_variants = [
                 {'id': v.id, 'name': v.name, 'price': int(v.price), 'stock_quantity': v.stock_quantity}
