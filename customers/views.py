@@ -200,6 +200,7 @@ class AdminReviewViewSet(TenantFilterMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = AdminReviewSerializer
     http_method_names = ['get', 'patch', 'head', 'options']
+    pagination_class = None
     queryset = Review.objects.all().order_by('-created_at')
 
     def partial_update(self, request, *args, **kwargs):
