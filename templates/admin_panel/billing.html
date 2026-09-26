@@ -9,6 +9,7 @@
   async init() {
     try {
       const res = await fetch('/api/admin/billing/', { headers: $store.adminAuth.headers() })
+      if (res.status === 401) { $store.adminAuth.logout(); return }
       if (res.ok) this.sub = await res.json()
     } catch {}
     this.loading = false

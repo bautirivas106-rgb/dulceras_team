@@ -14,6 +14,7 @@
         fetch('/api/admin/orders/stats/', { headers: $store.adminAuth.headers() }),
         fetch('/api/admin/orders/?page_size=5', { headers: $store.adminAuth.headers() }),
       ])
+      if (statsRes.status === 401 || ordersRes.status === 401) { $store.adminAuth.logout(); return }
       if (statsRes.ok) this.stats = await statsRes.json()
       if (ordersRes.ok) {
         const d = await ordersRes.json()

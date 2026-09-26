@@ -13,6 +13,7 @@
     this.loading = true
     try {
       const res = await fetch('/api/admin/coupons/?page_size=100', { headers: $store.adminAuth.headers() })
+      if (res.status === 401) { $store.adminAuth.logout(); return }
       if (res.ok) { const d = await res.json(); this.coupons = d.results ?? d }
     } catch {}
     this.loading = false

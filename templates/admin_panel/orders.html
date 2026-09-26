@@ -16,6 +16,7 @@
     if (this.statusFilter) params.set('status', this.statusFilter)
     try {
       const res = await fetch('/api/admin/orders/?' + params, { headers: $store.adminAuth.headers() })
+      if (res.status === 401) { $store.adminAuth.logout(); return }
       if (res.ok) {
         const d = await res.json()
         if (Array.isArray(d)) { this.orders = d; this.totalCount = d.length }

@@ -20,6 +20,7 @@
         fetch('/api/admin/catalog/products/?page_size=200', { headers: $store.adminAuth.headers() }),
         fetch('/api/admin/catalog/categories/?page_size=100', { headers: $store.adminAuth.headers() }),
       ])
+      if (pRes.status === 401 || cRes.status === 401) { $store.adminAuth.logout(); return }
       if (pRes.ok) { const d = await pRes.json(); this.products = d.results ?? d }
       if (cRes.ok) { const d = await cRes.json(); this.categories = d.results ?? d }
     } catch {}
@@ -100,7 +101,7 @@
               <td x-text="p.variants?.length ?? 0"></td>
               <td>
                 <button @click="toggleProduct(p)" class="badge" :class="p.is_active ? 'badge-green' : 'badge-grey'"
-                        :x-text="p.is_active ? 'Activo' : 'Inactivo'" style="cursor:pointer;border:none"></button>
+                        x-text="p.is_active ? 'Activo' : 'Inactivo'" style="cursor:pointer;border:none"></button>
               </td>
               <td class="flex gap-2">
                 <button @click="openEditProduct(p)" class="text-xs text-pink-deep" style="background:none;border:none;cursor:pointer">Editar</button>

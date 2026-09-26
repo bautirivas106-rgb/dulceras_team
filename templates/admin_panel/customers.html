@@ -13,6 +13,7 @@
     if (this.search) params.set('search', this.search)
     try {
       const res = await fetch('/api/admin/customers/?' + params, { headers: $store.adminAuth.headers() })
+      if (res.status === 401) { $store.adminAuth.logout(); return }
       if (res.ok) { const d = await res.json(); this.customers = d.results ?? d; this.totalCount = d.count ?? (d.results ? d.count : d.length) }
     } catch {}
     this.loading = false
