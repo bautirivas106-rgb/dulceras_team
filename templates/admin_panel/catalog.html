@@ -10,6 +10,7 @@
   productModal: null, catModal: null,
   pForm: { name:'', description:'', category_id:'', sort_order:0, is_active:true, made_to_order:false },
   pImageFile: null, pImagePreview: null,
+  pVariants: [], vSaving: [], vSaved: [], vError: '',
   pSaving: false, pError: '',
   cForm: { name:'', slug:'', is_active:true },
   cSaving: false, cError: '',
@@ -28,14 +29,24 @@
     this.loading = false
   },
 
+  totalStock(p) {
+    if (!p.variants || !p.variants.length) return 0
+    return p.variants.reduce((s, v) => s + (v.stock_quantity ?? 0), 0)
+  },
+
   openNewProduct() {
     this.pForm = { name:'', description:'', category_id: this.categories[0]?.id ?? '', sort_order:0, is_active:true, made_to_order:false }
     this.pImageFile = null; this.pImagePreview = null; this.pError = ''
+    this.pVariants = []; this.vSaving = []; this.vSaved = []; this.vError = ''
     this.productModal = 'new'
   },
   openEditProduct(p) {
     this.pForm = { name: p.name, description: p.description ?? '', category_id: p.category?.id ?? p.category ?? '', sort_order: p.sort_order ?? 0, is_active: p.is_active, made_to_order: p.made_to_order }
     this.pImageFile = null; this.pImagePreview = p.image_url ?? null; this.pError = ''
+    this.pVariants = (p.variants ?? []).map(v => ({ id: v.id, name: v.name, price: v.price, stock_quantity: v.stock_quantity ?? 0 }))
+    this.vSaving = this.pVariants.map(() => false)
+    this.vSaved  = this.pVariants.map(() => false)
+    this.vError  = ''
     this.productModal = p.id
   },
   onImageChange(e) {
@@ -43,6 +54,25 @@
     if (!file) return
     this.pImageFile = file
     this.pImagePreview = URL.createObjectURL(file)
+  },
+  async saveVariant(idx) {
+    const v = this.pVariants[idx]
+    this.vSaving[idx] = true; this.vSaved[idx] = false; this.vError = ''
+    try {
+      const res = await fetch('/api/admin/catalog/variants/' + v.id + '/', {
+        method: 'PATCH',
+        headers: $store.adminAuth.headers(),
+        body: JSON.stringify({ name: v.name, price: v.price, stock_quantity: Number(v.stock_quantity) })
+      })
+      if (res.ok) {
+        this.vSaved[idx] = true
+        setTimeout(() => { this.vSaved[idx] = false }, 2000)
+        await this.load()
+      } else {
+        const d = await res.json(); this.vError = Object.values(d).flat()[0] ?? 'Error al guardar variante.'
+      }
+    } catch { this.vError = 'Error de red.' }
+    this.vSaving[idx] = false
   },
   async saveProduct() {
     this.pSaving = true; this.pError = ''
@@ -115,7 +145,7 @@
     <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05)">
       <div x-show="loading" class="flex justify-center py-12"><div style="width:32px;height:32px;border:2px solid #EFE2CB;border-top-color:#E285AF;border-radius:50%;animation:spin 1s linear infinite"></div></div>
       <table class="data-table" x-show="!loading">
-        <thead><tr><th style="width:52px"></th><th>Nombre</th><th>Categoría</th><th>Variantes</th><th>Activo</th><th></th></tr></thead>
+        <thead><tr><th style="width:52px"></th><th>Nombre</th><th>Categoría</th><th>Stock</th><th>Activo</th><th></th></tr></thead>
         <tbody>
           <template x-for="p in products" :key="p.id">
             <tr>
@@ -129,9 +159,16 @@
                   </svg>
                 </div>
               </td>
-              <td class="font-medium text-brown" x-text="p.name"></td>
+              <td>
+                <p class="font-medium text-brown" x-text="p.name"></p>
+                <p class="text-xs text-brown-soft mt-0.5" x-show="p.variants?.length"
+                   x-text="p.variants.map(v => v.name).join(' · ')"></p>
+              </td>
               <td x-text="p.category_name ?? '—'"></td>
-              <td x-text="p.variants?.length ?? 0"></td>
+              <td>
+                <span x-text="totalStock(p)"
+                      :class="totalStock(p) > 0 ? 'badge badge-green' : 'badge badge-grey'"></span>
+              </td>
               <td>
                 <button @click="toggleProduct(p)" class="badge" :class="p.is_active ? 'badge-green' : 'badge-grey'"
                         x-text="p.is_active ? 'Activo' : 'Inactivo'" style="cursor:pointer;border:none"></button>
@@ -175,28 +212,79 @@
   <!-- Product modal -->
   <div x-show="productModal !== null" @click.self="productModal=null" x-transition
        class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.4)">
-    <div class="w-full max-w-sm bg-white rounded-2xl overflow-y-auto" style="padding:28px;box-shadow:0 24px 60px rgba(58,36,23,0.18);max-height:90vh" @click.stop>
+    <div class="w-full max-w-sm bg-white rounded-2xl overflow-y-auto" style="padding:28px;box-shadow:0 24px 60px rgba(58,36,23,0.18);max-height:92vh" @click.stop>
       <h2 class="font-fraunces font-bold text-brown mb-4" style="font-size:1.1rem" x-text="productModal === 'new' ? 'Nuevo producto' : 'Editar producto'"></h2>
       <div x-show="pError" x-text="pError" class="text-xs text-red-600 mb-3 bg-red-50 rounded-xl px-3 py-2"></div>
+
       <div class="space-y-3">
-        <input type="text" x-model="pForm.name" placeholder="Nombre *" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
-        <textarea x-model="pForm.description" placeholder="Descripción" rows="3" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none resize-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'"></textarea>
-        <select x-model="pForm.category_id" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff">
+        <!-- Nombre -->
+        <input type="text" x-model="pForm.name" placeholder="Nombre *"
+               class="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+               style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff"
+               onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+
+        <!-- Descripción -->
+        <textarea x-model="pForm.description" placeholder="Descripción" rows="2"
+                  class="w-full rounded-xl px-4 py-2.5 text-sm outline-none resize-none"
+                  style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff"
+                  onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'"></textarea>
+
+        <!-- Categoría -->
+        <select x-model="pForm.category_id" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+                style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff">
           <option value="">Sin categoría</option>
           <template x-for="c in categories" :key="c.id">
             <option :value="c.id" x-text="c.name"></option>
           </template>
         </select>
 
-        <!-- Image upload -->
+        <!-- Stock por variante -->
+        <div x-show="pVariants.length > 0">
+          <p class="text-xs font-semibold text-brown-soft uppercase tracking-wide mb-2">Stock por variante</p>
+          <div x-show="vError" x-text="vError" class="text-xs text-red-600 mb-2 bg-red-50 rounded-lg px-3 py-1.5"></div>
+          <div class="space-y-2">
+            <template x-for="(v, idx) in pVariants" :key="v.id">
+              <div class="rounded-xl p-3" style="background:#F6EAD6">
+                <p class="text-xs font-semibold text-brown mb-2" x-text="v.name"></p>
+                <div class="flex gap-2 items-center">
+                  <div class="flex-1">
+                    <label class="block text-xs text-brown-soft mb-1">Precio</label>
+                    <input type="number" x-model="v.price" min="0" step="100"
+                           class="w-full rounded-lg px-3 py-1.5 text-sm outline-none"
+                           style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff"
+                           onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+                  </div>
+                  <div style="width:80px">
+                    <label class="block text-xs text-brown-soft mb-1">Stock</label>
+                    <input type="number" x-model="v.stock_quantity" min="0"
+                           class="w-full rounded-lg px-3 py-1.5 text-sm outline-none"
+                           style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff"
+                           onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+                  </div>
+                  <div class="flex flex-col items-center" style="padding-top:18px">
+                    <button @click="saveVariant(idx)" :disabled="vSaving[idx]"
+                            class="text-xs font-semibold text-white rounded-lg px-3 py-1.5"
+                            :style="vSaving[idx] ? 'background:rgba(226,133,175,0.5);border:none;cursor:not-allowed' : 'background:#E285AF;border:none;cursor:pointer'">
+                      <span x-show="!vSaving[idx] && !vSaved[idx]">Guardar</span>
+                      <span x-show="vSaving[idx]">...</span>
+                      <span x-show="vSaved[idx]">✓</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Foto -->
         <div>
           <p class="text-xs font-medium text-brown-soft mb-1.5">Foto del producto</p>
-          <div x-show="pImagePreview" class="mb-2 rounded-xl overflow-hidden" style="height:140px">
-            <img :src="pImagePreview" style="width:100%;height:140px;object-fit:cover">
+          <div x-show="pImagePreview" class="mb-2 rounded-xl overflow-hidden" style="height:130px">
+            <img :src="pImagePreview" style="width:100%;height:130px;object-fit:cover">
           </div>
-          <label class="flex items-center justify-center gap-2 w-full text-sm font-medium cursor-pointer rounded-xl py-2.5 transition-colors"
+          <label class="flex items-center justify-center gap-2 w-full text-sm font-medium cursor-pointer rounded-xl py-2.5"
                  style="border:1.5px dashed rgba(58,36,23,0.2);color:#5A3B29;background:#F6EAD6">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
             <span x-text="pImagePreview ? 'Cambiar foto' : 'Subir foto'"></span>
@@ -204,13 +292,19 @@
           </label>
         </div>
 
+        <!-- Activo -->
         <label class="flex items-center gap-2 text-sm text-brown-soft cursor-pointer">
           <input type="checkbox" x-model="pForm.is_active" class="rounded"> Activo
         </label>
       </div>
+
       <div class="flex gap-3 mt-5">
-        <button @click="productModal=null" class="flex-1 text-sm font-semibold py-2.5 rounded-xl" style="background:#F6EAD6;color:#5A3B29;border:none;cursor:pointer">Cancelar</button>
-        <button @click="saveProduct()" :disabled="pSaving" class="flex-1 text-sm font-semibold text-white py-2.5 rounded-xl disabled:opacity-50" :style="pSaving ? 'background:rgba(226,133,175,0.6);border:none;cursor:not-allowed' : 'background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none;cursor:pointer'" x-text="pSaving ? 'Guardando...' : 'Guardar'"></button>
+        <button @click="productModal=null" class="flex-1 text-sm font-semibold py-2.5 rounded-xl"
+                style="background:#F6EAD6;color:#5A3B29;border:none;cursor:pointer">Cancelar</button>
+        <button @click="saveProduct()" :disabled="pSaving"
+                class="flex-1 text-sm font-semibold text-white py-2.5 rounded-xl disabled:opacity-50"
+                :style="pSaving ? 'background:rgba(226,133,175,0.6);border:none;cursor:not-allowed' : 'background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none;cursor:pointer'"
+                x-text="pSaving ? 'Guardando...' : 'Guardar producto'"></button>
       </div>
     </div>
   </div>
@@ -222,15 +316,26 @@
       <h2 class="font-fraunces font-bold text-brown mb-4" style="font-size:1.1rem" x-text="catModal === 'new' ? 'Nueva categoría' : 'Editar categoría'"></h2>
       <div x-show="cError" x-text="cError" class="text-xs text-red-600 mb-3"></div>
       <div class="space-y-3">
-        <input type="text" x-model="cForm.name" placeholder="Nombre *" @input="if (catModal==='new') cForm.slug=cForm.name.toLowerCase().replace(/\s+/g,'-')" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
-        <input type="text" x-model="cForm.slug" placeholder="Slug *" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        <input type="text" x-model="cForm.name" placeholder="Nombre *"
+               @input="if (catModal==='new') cForm.slug=cForm.name.toLowerCase().replace(/\s+/g,'-')"
+               class="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+               style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff"
+               onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        <input type="text" x-model="cForm.slug" placeholder="Slug *"
+               class="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+               style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff"
+               onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
         <label class="flex items-center gap-2 text-sm text-brown-soft cursor-pointer">
           <input type="checkbox" x-model="cForm.is_active" class="rounded"> Activa
         </label>
       </div>
       <div class="flex gap-3 mt-5">
-        <button @click="catModal=null" class="flex-1 text-sm font-semibold py-2.5 rounded-xl" style="background:#F6EAD6;color:#5A3B29;border:none;cursor:pointer">Cancelar</button>
-        <button @click="saveCat()" :disabled="cSaving" class="flex-1 text-sm font-semibold text-white py-2.5 rounded-xl disabled:opacity-50" :style="cSaving ? 'background:rgba(226,133,175,0.6);border:none;cursor:not-allowed' : 'background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none;cursor:pointer'" x-text="cSaving ? 'Guardando...' : 'Guardar'"></button>
+        <button @click="catModal=null" class="flex-1 text-sm font-semibold py-2.5 rounded-xl"
+                style="background:#F6EAD6;color:#5A3B29;border:none;cursor:pointer">Cancelar</button>
+        <button @click="saveCat()" :disabled="cSaving"
+                class="flex-1 text-sm font-semibold text-white py-2.5 rounded-xl disabled:opacity-50"
+                :style="cSaving ? 'background:rgba(226,133,175,0.6);border:none;cursor:not-allowed' : 'background:linear-gradient(135deg,#F0A0C4,#E285AF);border:none;cursor:pointer'"
+                x-text="cSaving ? 'Guardando...' : 'Guardar'"></button>
       </div>
     </div>
   </div>
