@@ -90,7 +90,7 @@ class TenantFilterMixin:
     def get_queryset(self):
         tenant = self.get_tenant()
         if tenant is None and self.request.user.is_platform_owner:
-            return self.queryset  # platform_owner ve todo
+            return self.queryset.all()  # .all() fuerza clon sin _result_cache
         if tenant is None:
             return self.queryset.model.objects.none()
         return self.queryset.filter(tenant=tenant)
