@@ -282,12 +282,19 @@
           {% for product in products %}
           {% cycle 'linear-gradient(135deg,#EFE2CB 0%,#F0A0C4 100%)' 'linear-gradient(135deg,#F4BDE0 0%,#E285AF 100%)' 'linear-gradient(135deg,#F6EAD6 0%,#EFE2CB 100%)' 'linear-gradient(135deg,#F0A0C4 0%,#F6EAD6 100%)' 'linear-gradient(135deg,#EFE2CB 0%,#F4BDE0 100%)' 'linear-gradient(135deg,#E285AF 0%,#EFE2CB 100%)' as bg silent %}
           <a href="/catalogo/"
-             style="display:block;flex-shrink:0;width:300px;border-radius:20px;overflow:hidden;text-decoration:none;background:#fff;box-shadow:0 10px 30px rgba(58,36,23,0.08);transition:transform 0.3s ease,box-shadow 0.3s ease"
+             style="display:block;flex-shrink:0;width:300px;border-radius:20px;overflow:hidden;text-decoration:none;background:#fff;box-shadow:0 10px 30px rgba(58,36,23,0.08);transition:transform 0.3s ease,box-shadow 0.3s ease{% if not product.has_stock %};opacity:0.6;filter:grayscale(1){% endif %}"
+             {% if product.has_stock %}
              onmouseenter="this.style.transform='translateY(-6px)';this.style.boxShadow='0 18px 40px rgba(58,36,23,0.14)'"
-             onmouseleave="this.style.transform='translateY(0)';this.style.boxShadow='0 10px 30px rgba(58,36,23,0.08)'">
-            <div style="height:200px;background:{{ bg }};overflow:hidden">
+             onmouseleave="this.style.transform='translateY(0)';this.style.boxShadow='0 10px 30px rgba(58,36,23,0.08)'"
+             {% endif %}>
+            <div style="height:200px;background:{{ bg }};overflow:hidden;position:relative">
               {% if product.image %}
               <img src="{{ product.image.url }}" alt="{{ product.name }}" style="width:100%;height:100%;object-fit:cover;display:block">
+              {% endif %}
+              {% if not product.has_stock %}
+              <div style="position:absolute;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center">
+                <span style="background:rgba(58,36,23,0.92);color:#EFE2CB;font-size:0.7rem;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;padding:6px 16px;border-radius:999px">Sin stock</span>
+              </div>
               {% endif %}
             </div>
             <div style="padding:18px 20px 22px">
@@ -298,8 +305,10 @@
               {% if product.description %}
               <p style="font-size:0.83rem;line-height:1.5;color:#5A3B29;margin:0 0 10px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">{{ product.description }}</p>
               {% endif %}
-              {% if product.min_price %}
+              {% if product.has_stock and product.min_price %}
               <p style="font-size:1rem;font-weight:700;color:#E285AF;margin:0">desde ${{ product.min_price|floatformat:0 }}</p>
+              {% elif not product.has_stock %}
+              <p style="font-size:0.88rem;font-weight:600;color:#9B8B7E;margin:0">Sin stock</p>
               {% endif %}
             </div>
           </a>

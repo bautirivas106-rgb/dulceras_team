@@ -25,8 +25,10 @@ def landing(request):
             .order_by('sort_order', 'name')[:9]
         )
         for p in raw:
-            prices = [float(v.price) for v in p.variants.all() if v.is_active and float(v.price) > 0]
+            active = [v for v in p.variants.all() if v.is_active]
+            prices = [float(v.price) for v in active if float(v.price) > 0]
             p.min_price = min(prices) if prices else None
+            p.has_stock = p.made_to_order or any(v.stock_quantity > 0 for v in active)
         products = raw
         reviews = list(Review.objects.filter(tenant=tenant, is_approved=True)[:12])
     return render(request, 'landing/home.html', {'products': products, 'reviews': reviews})
