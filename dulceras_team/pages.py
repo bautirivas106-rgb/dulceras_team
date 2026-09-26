@@ -46,10 +46,16 @@ def catalog(request):
             .order_by('sort_order', 'name')
         )
         for p in raw:
-            active_variants = [v for v in p.variants.all() if v.is_active]
-            prices = [float(v.price) for v in active_variants if float(v.price) > 0]
+            all_variants = list(p.variants.all())
+            active = [v for v in all_variants if v.is_active]
+            prices = [float(v.price) for v in active if float(v.price) > 0]
             p.min_price = min(prices) if prices else None
-            p.active_variants = active_variants
+            p.has_stock = p.made_to_order or any(v.stock_quantity > 0 for v in active)
+            # price as int avoids locale comma-decimal issue in Alpine JS expressions
+            p.active_variants = [
+                {'id': v.id, 'name': v.name, 'price': int(v.price), 'stock_quantity': v.stock_quantity}
+                for v in active
+            ]
         products = raw
     return render(request, 'catalog/catalog.html', {
         'categories': categories,
