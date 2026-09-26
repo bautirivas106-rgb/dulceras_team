@@ -9,6 +9,7 @@
   products: [], categories: [], loading: true,
   productModal: null, catModal: null,
   pForm: { name:'', description:'', category_id:'', sort_order:0, is_active:true, made_to_order:false },
+  pImageFile: null, pImagePreview: null,
   pSaving: false, pError: '',
   cForm: { name:'', slug:'', is_active:true },
   cSaving: false, cError: '',
@@ -29,21 +30,43 @@
 
   openNewProduct() {
     this.pForm = { name:'', description:'', category_id: this.categories[0]?.id ?? '', sort_order:0, is_active:true, made_to_order:false }
-    this.pError = ''
+    this.pImageFile = null; this.pImagePreview = null; this.pError = ''
     this.productModal = 'new'
   },
   openEditProduct(p) {
     this.pForm = { name: p.name, description: p.description ?? '', category_id: p.category?.id ?? p.category ?? '', sort_order: p.sort_order ?? 0, is_active: p.is_active, made_to_order: p.made_to_order }
-    this.pError = ''
+    this.pImageFile = null; this.pImagePreview = p.image_url ?? null; this.pError = ''
     this.productModal = p.id
+  },
+  onImageChange(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    this.pImageFile = file
+    this.pImagePreview = URL.createObjectURL(file)
   },
   async saveProduct() {
     this.pSaving = true; this.pError = ''
     const url = this.productModal === 'new' ? '/api/admin/catalog/products/' : '/api/admin/catalog/products/' + this.productModal + '/'
     const method = this.productModal === 'new' ? 'POST' : 'PATCH'
     try {
-      const res = await fetch(url, { method, headers: $store.adminAuth.headers(), body: JSON.stringify({ ...this.pForm, category: this.pForm.category_id }) })
-      if (res.ok) { await this.load(); this.productModal = null }
+      let body, headers
+      if (this.pImageFile) {
+        const fd = new FormData()
+        fd.append('name', this.pForm.name)
+        fd.append('description', this.pForm.description || '')
+        if (this.pForm.category_id) fd.append('category', this.pForm.category_id)
+        fd.append('is_active', this.pForm.is_active)
+        fd.append('made_to_order', this.pForm.made_to_order)
+        fd.append('sort_order', this.pForm.sort_order)
+        fd.append('image', this.pImageFile)
+        body = fd
+        headers = { 'Authorization': 'Bearer ' + $store.adminAuth.token }
+      } else {
+        body = JSON.stringify({ ...this.pForm, category: this.pForm.category_id })
+        headers = $store.adminAuth.headers()
+      }
+      const res = await fetch(url, { method, headers, body })
+      if (res.ok) { await this.load(); this.productModal = null; this.pImageFile = null }
       else { const d = await res.json(); this.pError = Object.values(d).flat()[0] ?? 'Error.' }
     } catch { this.pError = 'Error de red.' }
     this.pSaving = false
@@ -92,10 +115,20 @@
     <div class="bg-white rounded-2xl" style="border:1px solid rgba(58,36,23,0.07);box-shadow:0 2px 12px rgba(58,36,23,0.05)">
       <div x-show="loading" class="flex justify-center py-12"><div style="width:32px;height:32px;border:2px solid #EFE2CB;border-top-color:#E285AF;border-radius:50%;animation:spin 1s linear infinite"></div></div>
       <table class="data-table" x-show="!loading">
-        <thead><tr><th>Nombre</th><th>Categoría</th><th>Variantes</th><th>Activo</th><th></th></tr></thead>
+        <thead><tr><th style="width:52px"></th><th>Nombre</th><th>Categoría</th><th>Variantes</th><th>Activo</th><th></th></tr></thead>
         <tbody>
           <template x-for="p in products" :key="p.id">
             <tr>
+              <td style="padding:8px 10px">
+                <div class="rounded-lg overflow-hidden flex items-center justify-center"
+                     style="width:40px;height:40px;background:#F6EAD6;flex-shrink:0">
+                  <img x-show="p.image_url" :src="p.image_url" style="width:40px;height:40px;object-fit:cover;display:block">
+                  <svg x-show="!p.image_url" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C25D8A" stroke-width="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                </div>
+              </td>
               <td class="font-medium text-brown" x-text="p.name"></td>
               <td x-text="p.category_name ?? '—'"></td>
               <td x-text="p.variants?.length ?? 0"></td>
@@ -109,7 +142,7 @@
               </td>
             </tr>
           </template>
-          <tr x-show="!loading && products.length===0"><td colspan="5" class="text-center py-10 text-brown-soft">Sin productos.</td></tr>
+          <tr x-show="!loading && products.length===0"><td colspan="6" class="text-center py-10 text-brown-soft">Sin productos.</td></tr>
         </tbody>
       </table>
     </div>
@@ -142,9 +175,9 @@
   <!-- Product modal -->
   <div x-show="productModal !== null" @click.self="productModal=null" x-transition
        class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.4)">
-    <div class="w-full max-w-sm bg-white rounded-2xl" style="padding:28px;box-shadow:0 24px 60px rgba(58,36,23,0.18)" @click.stop>
+    <div class="w-full max-w-sm bg-white rounded-2xl overflow-y-auto" style="padding:28px;box-shadow:0 24px 60px rgba(58,36,23,0.18);max-height:90vh" @click.stop>
       <h2 class="font-fraunces font-bold text-brown mb-4" style="font-size:1.1rem" x-text="productModal === 'new' ? 'Nuevo producto' : 'Editar producto'"></h2>
-      <div x-show="pError" x-text="pError" class="text-xs text-red-600 mb-3"></div>
+      <div x-show="pError" x-text="pError" class="text-xs text-red-600 mb-3 bg-red-50 rounded-xl px-3 py-2"></div>
       <div class="space-y-3">
         <input type="text" x-model="pForm.name" placeholder="Nombre *" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
         <textarea x-model="pForm.description" placeholder="Descripción" rows="3" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none resize-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'"></textarea>
@@ -154,6 +187,23 @@
             <option :value="c.id" x-text="c.name"></option>
           </template>
         </select>
+
+        <!-- Image upload -->
+        <div>
+          <p class="text-xs font-medium text-brown-soft mb-1.5">Foto del producto</p>
+          <div x-show="pImagePreview" class="mb-2 rounded-xl overflow-hidden" style="height:140px">
+            <img :src="pImagePreview" style="width:100%;height:140px;object-fit:cover">
+          </div>
+          <label class="flex items-center justify-center gap-2 w-full text-sm font-medium cursor-pointer rounded-xl py-2.5 transition-colors"
+                 style="border:1.5px dashed rgba(58,36,23,0.2);color:#5A3B29;background:#F6EAD6">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span x-text="pImagePreview ? 'Cambiar foto' : 'Subir foto'"></span>
+            <input type="file" accept="image/*" class="hidden" @change="onImageChange($event)">
+          </label>
+        </div>
+
         <label class="flex items-center gap-2 text-sm text-brown-soft cursor-pointer">
           <input type="checkbox" x-model="pForm.is_active" class="rounded"> Activo
         </label>
