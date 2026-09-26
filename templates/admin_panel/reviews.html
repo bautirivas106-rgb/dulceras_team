@@ -7,7 +7,7 @@
 <div x-data="{
   reviews: [],
   loading: true,
-  toggling: {},
+  togglingId: null,
 
   async load() {
     this.loading = true
@@ -20,7 +20,7 @@
   },
 
   async toggle(r) {
-    this.toggling[r.id] = true
+    this.togglingId = r.id
     try {
       const res = await fetch(`/api/admin/reviews/${r.id}/`, {
         method: 'PATCH',
@@ -33,7 +33,7 @@
         if (idx !== -1) this.reviews.splice(idx, 1, updated)
       }
     } catch {}
-    this.toggling[r.id] = false
+    this.togglingId = null
   },
 
   stars(n) { return '★'.repeat(n) + '☆'.repeat(5 - n) },
@@ -118,14 +118,14 @@
           <!-- Toggle -->
           <div class="flex-shrink-0">
             <button @click="toggle(r)"
-                    :disabled="toggling[r.id]"
+                    :disabled="togglingId === r.id"
                     class="text-xs font-semibold rounded-xl px-4 py-2 transition-all"
-                    :style="toggling[r.id]
+                    :style="togglingId === r.id
                       ? 'opacity:0.5;cursor:not-allowed;border:none;background:#F6EAD6;color:#9B8B7E'
                       : r.is_approved
                         ? 'background:rgba(192,57,43,0.08);color:#C0392B;border:none;cursor:pointer'
                         : 'background:rgba(39,174,96,0.1);color:#27AE60;border:none;cursor:pointer'"
-                    x-text="toggling[r.id] ? '...' : r.is_approved ? 'Ocultar' : 'Publicar'">
+                    x-text="togglingId === r.id ? '...' : r.is_approved ? 'Ocultar' : 'Publicar'">
             </button>
           </div>
         </div>
