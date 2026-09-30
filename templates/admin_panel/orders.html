@@ -27,7 +27,7 @@
   },
 
   statusLabel(s) {
-    const M = { pending_deposit:'Esperando seña', deposit_paid:'Seña pagada', in_progress:'En preparación', ready:'Listo', delivered:'Entregado', cancelled:'Cancelado' }
+    const M = { pending_deposit:'Esperando seña', deposit_paid:'Seña pagada', confirmed:'Confirmado', in_production:'En preparación', ready:'Listo', delivered:'Entregado', cancelled:'Cancelado' }
     return M[s] || s
   },
   statusClass(s) {
@@ -53,7 +53,8 @@ x-init="load()">
       <option value="">Todos los estados</option>
       <option value="pending_deposit">Esperando seña</option>
       <option value="deposit_paid">Seña pagada</option>
-      <option value="in_progress">En preparación</option>
+      <option value="confirmed">Confirmado</option>
+      <option value="in_production">En preparación</option>
       <option value="ready">Listo</option>
       <option value="delivered">Entregado</option>
       <option value="cancelled">Cancelado</option>
