@@ -38,6 +38,16 @@ document.addEventListener('alpine:init', () => {
     fmt(n) { return n.toLocaleString('es-AR') },
   })
 
+  /* ── Dark mode ─────────────────────────────────────────────────────────── */
+  Alpine.store('darkMode', {
+    enabled: localStorage.getItem('admin_dark') === '1',
+    toggle() {
+      this.enabled = !this.enabled
+      localStorage.setItem('admin_dark', this.enabled ? '1' : '0')
+      document.documentElement.classList.toggle('dark', this.enabled)
+    },
+  })
+
   /* ── Admin auth ────────────────────────────────────────────────────────── */
   Alpine.store('adminAuth', {
     token:    localStorage.getItem('access_token'),
