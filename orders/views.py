@@ -198,9 +198,13 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
         if date_filter:
             qs = qs.filter(required_date=date_filter)
 
-        customer_filter = self.request.query_params.get('customer')
-        if customer_filter:
-            qs = qs.filter(customer__phone__icontains=customer_filter)
+        search = self.request.query_params.get('search') or self.request.query_params.get('customer')
+        if search:
+            qs = qs.filter(
+                Q(customer__name__icontains=search) |
+                Q(customer__phone__icontains=search) |
+                Q(customer__email__icontains=search)
+            )
 
         return qs
 
