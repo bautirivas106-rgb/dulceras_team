@@ -31,10 +31,16 @@
     return M[s] || s
   },
   statusClass(s) {
-    if (s==='cancelled') return 'badge badge-red'
-    if (s==='delivered') return 'badge badge-green'
-    if (s==='ready') return 'badge badge-blue'
-    return 'badge badge-pink'
+    const C = {
+      cancelled:       'badge badge-red',
+      pending_deposit: 'badge badge-purple',
+      deposit_paid:    'badge badge-blue',
+      confirmed:       'badge badge-green',
+      in_production:   'badge badge-yellow',
+      ready:           'badge badge-orange',
+      delivered:       'badge badge-pink',
+    }
+    return C[s] ?? 'badge badge-grey'
   },
   fmt(n) { return Number(n||0).toLocaleString('es-AR') },
 }"

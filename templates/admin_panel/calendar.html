@@ -63,9 +63,9 @@
     </div>
 
     <!-- Weeks -->
-    <div x-show="!loading" class="grid grid-cols-7" style="min-height:300px">
+    <div x-show="!loading" class="grid grid-cols-7" style="min-height:500px">
       <template x-for="(day, idx) in days" :key="idx">
-        <div class="border-r border-b" style="border-color:rgba(58,36,23,0.06);min-height:80px;padding:6px"
+        <div class="border-r border-b" style="border-color:rgba(58,36,23,0.06);min-height:120px;padding:8px"
              :style="day ? '' : 'background:#FAFAFA'">
           <span x-show="day" x-text="day" class="text-xs font-semibold" style="color:#5A3B29"></span>
           <template x-for="o in ordersForDay(day)" :key="o.id">
