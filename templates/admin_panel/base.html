@@ -94,6 +94,11 @@
     /* Botón toggle */
     html.dark .dm-toggle { background: rgba(255,255,255,0.06) !important; color: var(--dm-soft) !important; }
     html.dark .dm-toggle:hover { background: rgba(255,255,255,0.1) !important; }
+    /* Íconos luna/sol — CSS puro, sin depender de Alpine */
+    .dm-icon-moon { display: block; }
+    .dm-icon-sun  { display: none; }
+    html.dark .dm-icon-moon { display: none; }
+    html.dark .dm-icon-sun  { display: block; }
 
     /* Inputs / selects en dark */
     html.dark input, html.dark select, html.dark textarea {
@@ -190,18 +195,16 @@
         <a href="/" target="_blank" class="text-xs text-brown-soft no-underline hover:underline">Ver tienda →</a>
 
         <!-- Toggle dark mode -->
-        <button @click="$store.darkMode.toggle()"
-                class="dm-toggle flex items-center justify-center rounded-full transition-all"
-                :title="$store.darkMode.enabled ? 'Modo claro' : 'Modo oscuro'"
-                style="width:32px;height:32px;background:rgba(58,36,23,0.06);border:none;cursor:pointer;color:#5A3B29;transition:background 0.2s"
-                onmouseenter="this.style.background='rgba(58,36,23,0.12)'"
-                onmouseleave="this.style.background='rgba(58,36,23,0.06)'">
-          <!-- Luna (light → dark) -->
-          <svg x-show="!$store.darkMode.enabled" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <button id="dm-toggle-btn" onclick="dtToggleDark()"
+                class="dm-toggle flex items-center justify-center rounded-full"
+                title="Modo oscuro / claro"
+                style="width:36px;height:36px;background:rgba(58,36,23,0.06);border:none;cursor:pointer;color:#5A3B29;flex-shrink:0">
+          <!-- Luna — visible en modo claro (CSS la oculta en dark) -->
+          <svg class="dm-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
           </svg>
-          <!-- Sol (dark → light) -->
-          <svg x-show="$store.darkMode.enabled" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Sol — visible en modo oscuro (CSS la oculta en light) -->
+          <svg class="dm-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="5"/>
             <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
             <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
@@ -209,6 +212,13 @@
             <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
           </svg>
         </button>
+        <script>
+          function dtToggleDark() {
+            var isDark = document.documentElement.classList.toggle('dark')
+            localStorage.setItem('admin_dark', isDark ? '1' : '0')
+            if (window.Alpine) Alpine.store('darkMode').enabled = isDark
+          }
+        </script>
 
         <div class="hidden md:block text-sm font-medium text-brown-soft" x-text="$store.adminAuth.username ?? ''"></div>
       </div>
