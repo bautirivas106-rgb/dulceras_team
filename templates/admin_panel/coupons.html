@@ -6,7 +6,7 @@
 {% block page_content %}
 <div x-data="{
   coupons: [], loading: true, modal: null,
-  form: { code:'', discount_type:'percentage', discount_value:'', min_subtotal:'', max_uses:'', expires_at:'', is_active:true },
+  form: { code:'', discount_type:'percentage', discount_value:'', min_order_amount:'', max_uses:'', valid_until:'', is_active:true },
   saving: false, formError: '',
 
   async load() {
@@ -20,19 +20,28 @@
   },
 
   openNew() {
-    this.form = { code:'', discount_type:'percentage', discount_value:'', min_subtotal:'', max_uses:'', expires_at:'', is_active:true }
+    this.form = { code:'', discount_type:'percentage', discount_value:'', min_order_amount:'', max_uses:'', valid_until:'', is_active:true }
     this.formError = ''; this.modal = 'new'
   },
   openEdit(c) {
-    this.form = { code: c.code, discount_type: c.discount_type, discount_value: c.discount_value, min_subtotal: c.min_subtotal ?? '', max_uses: c.max_uses ?? '', expires_at: c.expires_at ? c.expires_at.split('T')[0] : '', is_active: c.is_active }
+    this.form = { code: c.code, discount_type: c.discount_type, discount_value: c.discount_value, min_order_amount: c.min_order_amount ?? '', max_uses: c.max_uses || '', valid_until: c.valid_until ?? '', is_active: c.is_active }
     this.formError = ''; this.modal = c.id
   },
   async save() {
     this.saving = true; this.formError = ''
     const url = this.modal === 'new' ? '/api/admin/coupons/' : '/api/admin/coupons/' + this.modal + '/'
     const method = this.modal === 'new' ? 'POST' : 'PATCH'
+    const payload = {
+      code: this.form.code,
+      discount_type: this.form.discount_type,
+      discount_value: this.form.discount_value,
+      min_order_amount: this.form.min_order_amount !== '' ? this.form.min_order_amount : 0,
+      max_uses: this.form.max_uses !== '' ? parseInt(this.form.max_uses) : 0,
+      valid_until: this.form.valid_until || null,
+      is_active: this.form.is_active,
+    }
     try {
-      const res = await fetch(url, { method, headers: $store.adminAuth.headers(), body: JSON.stringify(this.form) })
+      const res = await fetch(url, { method, headers: $store.adminAuth.headers(), body: JSON.stringify(payload) })
       if (res.ok) { await this.load(); this.modal = null }
       else { const d = await res.json(); this.formError = Object.values(d).flat()[0] ?? 'Error.' }
     } catch { this.formError = 'Error de red.' }
@@ -61,7 +70,7 @@
             <td x-text="c.discount_type === 'percentage' ? 'Porcentaje' : 'Monto fijo'"></td>
             <td x-text="c.discount_type === 'percentage' ? c.discount_value + '%' : '$' + fmt(c.discount_value)"></td>
             <td x-text="(c.uses_count ?? 0) + (c.max_uses ? ' / ' + c.max_uses : '')"></td>
-            <td x-text="c.expires_at ? c.expires_at.split('T')[0] : '—'"></td>
+            <td x-text="c.valid_until ?? '—'"></td>
             <td>
               <button @click="toggle(c)" class="badge" :class="c.is_active ? 'badge-green' : 'badge-grey'"
                       x-text="c.is_active ? 'Activo' : 'Inactivo'" style="cursor:pointer;border:none"></button>
@@ -87,9 +96,9 @@
           <option value="fixed">Monto fijo ($)</option>
         </select>
         <input type="number" x-model="form.discount_value" :placeholder="form.discount_type === 'percentage' ? 'Valor % (ej: 20)' : 'Monto fijo (ej: 500)'" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
-        <input type="number" x-model="form.min_subtotal" placeholder="Subtotal mínimo (opcional)" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
+        <input type="number" x-model="form.min_order_amount" placeholder="Subtotal mínimo (opcional)" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
         <input type="number" x-model="form.max_uses" placeholder="Usos máximos (opcional)" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff" onfocus="this.style.borderColor='#E285AF'" onblur="this.style.borderColor='rgba(58,36,23,0.15)'">
-        <input type="date" x-model="form.expires_at" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff">
+        <input type="date" x-model="form.valid_until" class="w-full rounded-xl px-4 py-2.5 text-sm outline-none" style="border:1.5px solid rgba(58,36,23,0.15);color:#3A2417;background:#fff">
         <label class="flex items-center gap-2 text-sm text-brown-soft cursor-pointer">
           <input type="checkbox" x-model="form.is_active" class="rounded"> Activo
         </label>
