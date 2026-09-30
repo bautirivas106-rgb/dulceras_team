@@ -207,7 +207,7 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
             )
 
         ordering = self.request.query_params.get('ordering')
-        if ordering in ('created_at', '-created_at', 'required_date', '-required_date'):
+        if ordering in ('id', '-id', 'created_at', '-created_at', 'required_date', '-required_date'):
             qs = qs.order_by(ordering)
 
         return qs

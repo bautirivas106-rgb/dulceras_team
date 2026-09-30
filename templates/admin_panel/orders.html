@@ -121,7 +121,11 @@ x-init="load()">
             <input type="checkbox" :checked="allSelected" @change="toggleAll()"
                    style="width:15px;height:15px;cursor:pointer;accent-color:#E285AF">
           </th>
-          <th>#</th>
+          <th>
+            <button @click="toggleSort('id')" style="background:none;border:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:4px;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;font-weight:inherit">
+              N° Pedido <span x-text="sortIcon('id')" style="font-size:0.8em;opacity:0.6"></span>
+            </button>
+          </th>
           <th>Cliente</th>
           <th>
             <button @click="toggleSort('created_at')" style="background:none;border:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:4px;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;font-weight:inherit">
