@@ -244,6 +244,9 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
         if not ids or not isinstance(ids, list):
             return Response({'detail': 'Se requiere una lista de IDs.'}, status=400)
         qs = self.get_queryset().filter(pk__in=ids)
+        # PaymentIntent tiene on_delete=PROTECT → borrar primero
+        from payments.models import PaymentIntent
+        PaymentIntent.objects.filter(order__in=qs).delete()
         count = qs.count()
         qs.delete()
         return Response({'deleted': count})
