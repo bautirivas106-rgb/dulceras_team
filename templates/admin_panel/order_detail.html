@@ -1,7 +1,16 @@
 {% extends "admin_panel/base.html" %}
 {% block title %}Pedido #{{ order_id }} — Panel{% endblock %}
 {% block nav_orders %}active{% endblock %}
-{% block page_title %}<a href="/admin/orders/" class="text-brown-soft font-normal no-underline hover:underline text-sm">Pedidos</a> / Pedido #{{ order_id }}{% endblock %}
+{% block page_title %}
+<div class="flex items-center gap-3">
+  <a href="/admin/orders/" class="flex items-center gap-1.5 text-sm font-semibold no-underline rounded-xl px-3 py-1.5"
+     style="background:rgba(58,36,23,0.06);color:#5A3B29;border:none">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    Volver
+  </a>
+  <span class="text-brown-soft font-normal text-sm">Pedido #{{ order_id }}</span>
+</div>
+{% endblock %}
 
 {% block page_content %}
 <div x-data="{
