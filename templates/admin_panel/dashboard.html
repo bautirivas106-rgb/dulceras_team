@@ -8,30 +8,45 @@
   stats: null,
   orders: [],
   loading: true,
+  sort: '',
+  toggleSort(field) {
+    if (this.sort === field) this.sort = '-' + field
+    else if (this.sort === '-' + field) this.sort = ''
+    else this.sort = field
+    this.loadOrders()
+  },
+  sortIcon(field) {
+    if (this.sort === field) return '↑'
+    if (this.sort === '-' + field) return '↓'
+    return '↕'
+  },
+  async loadOrders() {
+    const params = new URLSearchParams({ page_size: 5 })
+    if (this.sort) params.set('ordering', this.sort)
+    try {
+      const res = await fetch('/api/admin/orders/?' + params, { headers: $store.adminAuth.headers() })
+      if (res.status === 401) { $store.adminAuth.logout(); return }
+      if (res.ok) { const d = await res.json(); this.orders = Array.isArray(d) ? d.slice(0,5) : (d.results ?? []).slice(0,5) }
+    } catch {}
+  },
   async init() {
     try {
-      const [statsRes, ordersRes] = await Promise.all([
+      const [statsRes] = await Promise.all([
         fetch('/api/admin/orders/stats/', { headers: $store.adminAuth.headers() }),
-        fetch('/api/admin/orders/?page_size=5', { headers: $store.adminAuth.headers() }),
       ])
-      if (statsRes.status === 401 || ordersRes.status === 401) { $store.adminAuth.logout(); return }
+      if (statsRes.status === 401) { $store.adminAuth.logout(); return }
       if (statsRes.ok) this.stats = await statsRes.json()
-      if (ordersRes.ok) {
-        const d = await ordersRes.json()
-        this.orders = Array.isArray(d) ? d.slice(0,5) : (d.results ?? []).slice(0,5)
-      }
+      await this.loadOrders()
     } catch {}
     this.loading = false
   },
   statusLabel(s) {
-    const M = { pending_deposit:'Esperando seña', deposit_paid:'Seña pagada', in_progress:'En prep.', ready:'Listo', delivered:'Entregado', cancelled:'Cancelado' }
+    const M = { pending_deposit:'Esperando seña', deposit_paid:'Seña pagada', confirmed:'Confirmado', in_production:'En preparación', ready:'Listo para retirar', delivered:'Entregado', cancelled:'Cancelado' }
     return M[s] || s
   },
   statusClass(s) {
-    if (s==='cancelled') return 'badge badge-red'
-    if (s==='delivered') return 'badge badge-green'
-    if (s==='ready') return 'badge badge-blue'
-    return 'badge badge-pink'
+    const C = { cancelled:'badge badge-red', pending_deposit:'badge badge-purple', deposit_paid:'badge badge-blue', confirmed:'badge badge-green', in_production:'badge badge-yellow', ready:'badge badge-orange', delivered:'badge badge-pink' }
+    return C[s] ?? 'badge badge-grey'
   },
   fmt(n) { return Number(n||0).toLocaleString('es-AR') }
 }">
@@ -74,9 +89,21 @@
     <table class="data-table" x-show="!loading && orders.length > 0">
       <thead>
         <tr>
-          <th>#</th>
-          <th>Cliente</th>
-          <th>Fecha</th>
+          <th>
+            <button @click="toggleSort('id')" style="background:none;border:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:4px;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;font-weight:inherit">
+              N° Pedido <span x-text="sortIcon('id')" style="font-size:0.8em;opacity:0.6"></span>
+            </button>
+          </th>
+          <th>
+            <button @click="toggleSort('customer__name')" style="background:none;border:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:4px;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;font-weight:inherit">
+              Cliente <span x-text="sortIcon('customer__name')" style="font-size:0.8em;opacity:0.6"></span>
+            </button>
+          </th>
+          <th>
+            <button @click="toggleSort('required_date')" style="background:none;border:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:4px;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;font-weight:inherit">
+              Fecha entrega <span x-text="sortIcon('required_date')" style="font-size:0.8em;opacity:0.6"></span>
+            </button>
+          </th>
           <th>Total</th>
           <th>Estado</th>
           <th></th>
