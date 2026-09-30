@@ -232,6 +232,9 @@ class AdminCustomerViewSet(TenantFilterMixin, viewsets.ModelViewSet):
                 Q(phone__icontains=search) |
                 Q(email__icontains=search)
             )
+        ordering = self.request.query_params.get('ordering')
+        if ordering in ('name', '-name'):
+            qs = qs.order_by(ordering)
         return qs
 
     def destroy(self, request, *args, **kwargs):

@@ -5,12 +5,17 @@
 
 {% block page_content %}
 <div x-data="{
-  customers: [], loading: true, search: '', page: 1, pageSize: 20, totalCount: 0,
+  customers: [], loading: true, search: '', nameSort: '', page: 1, pageSize: 20, totalCount: 0,
   get totalPages() { return Math.ceil(this.totalCount / this.pageSize) },
+  toggleNameSort() {
+    this.nameSort = this.nameSort === 'asc' ? 'desc' : 'asc'
+    this.page = 1; this.load()
+  },
   async load() {
     this.loading = true
     const params = new URLSearchParams({ page: this.page, page_size: this.pageSize })
     if (this.search) params.set('search', this.search)
+    if (this.nameSort) params.set('ordering', this.nameSort === 'asc' ? 'name' : '-name')
     try {
       const res = await fetch('/api/admin/customers/?' + params, { headers: $store.adminAuth.headers() })
       if (res.status === 401) { $store.adminAuth.logout(); return }
@@ -34,7 +39,12 @@
     <table class="data-table" x-show="!loading">
       <thead>
         <tr>
-          <th>Nombre</th>
+          <th>
+            <button @click="toggleNameSort()" style="background:none;border:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:4px;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;font-weight:inherit">
+              Nombre
+              <span x-text="nameSort === 'asc' ? '↑' : nameSort === 'desc' ? '↓' : '↕'" style="font-size:0.8em;opacity:0.6"></span>
+            </button>
+          </th>
           <th>Teléfono</th>
           <th>Email</th>
           <th>Pedidos</th>

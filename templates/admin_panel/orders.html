@@ -6,14 +6,49 @@
 {% block page_content %}
 <div x-data="{
   orders: [], loading: true, search: '', statusFilter: '',
-  page: 1, pageSize: 20, totalCount: 0,
+  sort: '', page: 1, pageSize: 20, totalCount: 0,
+  selected: [],
   get totalPages() { return Math.ceil(this.totalCount / this.pageSize) },
+  get allSelected() { return this.orders.length > 0 && this.selected.length === this.orders.length },
+  toggleAll() {
+    this.selected = this.allSelected ? [] : this.orders.map(o => o.id)
+  },
+  toggleOne(id) {
+    const i = this.selected.indexOf(id)
+    if (i === -1) this.selected.push(id)
+    else this.selected.splice(i, 1)
+  },
+  async deleteSelected() {
+    if (!this.selected.length) return
+    if (!confirm(`¿Borrar ${this.selected.length} pedido(s)? Esta acción no se puede deshacer.`)) return
+    try {
+      const res = await fetch('/api/admin/orders/bulk-delete/', {
+        method: 'POST',
+        headers: { ...$store.adminAuth.headers(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: this.selected })
+      })
+      if (res.ok) { this.selected = []; this.load() }
+    } catch {}
+  },
+
+  toggleSort(field) {
+    if (this.sort === field) this.sort = '-' + field
+    else if (this.sort === '-' + field) this.sort = ''
+    else this.sort = field
+    this.page = 1; this.load()
+  },
+  sortIcon(field) {
+    if (this.sort === field) return '↑'
+    if (this.sort === '-' + field) return '↓'
+    return '↕'
+  },
 
   async load() {
     this.loading = true
     const params = new URLSearchParams({ page: this.page, page_size: this.pageSize })
     if (this.search) params.set('search', this.search)
     if (this.statusFilter) params.set('status', this.statusFilter)
+    if (this.sort) params.set('ordering', this.sort)
     try {
       const res = await fetch('/api/admin/orders/?' + params, { headers: $store.adminAuth.headers() })
       if (res.status === 401) { $store.adminAuth.logout(); return }
@@ -47,7 +82,7 @@
 x-init="load()">
 
   <!-- Filters -->
-  <div class="flex flex-wrap gap-3 mb-4">
+  <div class="flex flex-wrap gap-3 mb-4 items-center">
     <input type="search" x-model="search" @input.debounce.400ms="page=1; load()"
            placeholder="Buscar por cliente..."
            class="rounded-xl px-4 py-2 text-sm outline-none"
@@ -65,6 +100,12 @@ x-init="load()">
       <option value="delivered">Entregado</option>
       <option value="cancelled">Cancelado</option>
     </select>
+    <button x-show="selected.length > 0" @click="deleteSelected()"
+            class="flex items-center gap-1.5 text-sm font-semibold rounded-xl px-4 py-2"
+            style="background:rgba(231,76,60,0.1);color:#C0392B;border:1.5px solid rgba(231,76,60,0.25);cursor:pointer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      Borrar (<span x-text="selected.length"></span>)
+    </button>
   </div>
 
   <!-- Table card -->
@@ -76,10 +117,22 @@ x-init="load()">
     <table class="data-table" x-show="!loading">
       <thead>
         <tr>
+          <th style="width:36px">
+            <input type="checkbox" :checked="allSelected" @change="toggleAll()"
+                   style="width:15px;height:15px;cursor:pointer;accent-color:#E285AF">
+          </th>
           <th>#</th>
           <th>Cliente</th>
-          <th>Fecha pedido</th>
-          <th>Fecha entrega</th>
+          <th>
+            <button @click="toggleSort('created_at')" style="background:none;border:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:4px;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;font-weight:inherit">
+              Fecha pedido <span x-text="sortIcon('created_at')" style="font-size:0.8em;opacity:0.6"></span>
+            </button>
+          </th>
+          <th>
+            <button @click="toggleSort('required_date')" style="background:none;border:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:4px;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;font-weight:inherit">
+              Fecha entrega <span x-text="sortIcon('required_date')" style="font-size:0.8em;opacity:0.6"></span>
+            </button>
+          </th>
           <th>Total</th>
           <th>Estado</th>
           <th></th>
@@ -88,6 +141,10 @@ x-init="load()">
       <tbody>
         <template x-for="o in orders" :key="o.id">
           <tr>
+            <td>
+              <input type="checkbox" :checked="selected.includes(o.id)" @change="toggleOne(o.id)"
+                     style="width:15px;height:15px;cursor:pointer;accent-color:#E285AF">
+            </td>
             <td class="font-semibold text-brown" x-text="'#' + o.id"></td>
             <td x-text="o.customer_name ?? o.customer?.name ?? '—'"></td>
             <td x-text="o.created_at ? o.created_at.split('T')[0] : '—'"></td>
@@ -98,7 +155,7 @@ x-init="load()">
           </tr>
         </template>
         <tr x-show="!loading && orders.length === 0">
-          <td colspan="7" class="text-center py-10 text-brown-soft">No hay pedidos.</td>
+          <td colspan="8" class="text-center py-10 text-brown-soft">No hay pedidos.</td>
         </tr>
       </tbody>
     </table>

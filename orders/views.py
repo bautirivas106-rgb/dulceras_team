@@ -206,6 +206,10 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
                 Q(customer__email__icontains=search)
             )
 
+        ordering = self.request.query_params.get('ordering')
+        if ordering in ('created_at', '-created_at', 'required_date', '-required_date'):
+            qs = qs.order_by(ordering)
+
         return qs
 
     def get_serializer_class(self):
@@ -233,6 +237,16 @@ class AdminOrderViewSet(viewsets.ReadOnlyModelViewSet):
             'monthly_revenue': float(revenue_qs.aggregate(t=Sum('total'))['t'] or 0),
             'total_customers': Customer.objects.filter(tenant=request.user.tenant).count(),
         })
+
+    @action(detail=False, methods=['post'], url_path='bulk-delete')
+    def bulk_delete(self, request):
+        ids = request.data.get('ids', [])
+        if not ids or not isinstance(ids, list):
+            return Response({'detail': 'Se requiere una lista de IDs.'}, status=400)
+        qs = self.get_queryset().filter(pk__in=ids)
+        count = qs.count()
+        qs.delete()
+        return Response({'deleted': count})
 
     @action(detail=True, methods=['patch'], url_path='status')
     def update_status(self, request, pk=None):
