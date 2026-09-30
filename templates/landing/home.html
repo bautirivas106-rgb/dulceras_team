@@ -9,19 +9,17 @@
   <!-- ═══════════════════════════════════════════════════════════════ HEADER -->
   <header
     id="site-header"
-    class="sticky top-0 z-50"
-    x-data="{ menuOpen: false, cartOpen: false, scrolled: false }"
-    x-init="window.addEventListener('scroll', () => { scrolled = window.scrollY > 10 }, { passive: true })"
-    :style="scrolled
-      ? 'background:rgba(253,246,236,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(58,36,23,0.08);box-shadow:0 6px 24px rgba(58,36,23,0.08);transition:box-shadow 0.3s'
-      : 'background:rgba(253,246,236,0.8);backdrop-filter:blur(14px);border-bottom:1px solid rgba(58,36,23,0.08);transition:box-shadow 0.3s'"
+    x-data="{ menuOpen: false, cartOpen: false }"
+    style="background:rgba(253,246,236,0.95);border-bottom:1px solid rgba(58,36,23,0.08)"
   >
-    <div style="max-width:1180px;margin:0 auto;padding:14px 32px" class="flex items-center justify-between">
+    <div style="max-width:1180px;margin:0 auto;padding:10px 32px" class="flex items-center justify-between">
 
       <!-- Logo -->
       <a href="/" class="flex items-center gap-2.5 no-underline">
-        <img src="{% static 'brand/logo-icon.png' %}" alt="Dulceras Team" style="height:60px;width:auto;flex-shrink:0">
-        <img src="{% static 'brand/logo-wordmark.png' %}" alt="Dulceras Team" class="hidden sm:block" style="height:130px;width:auto">
+        <img src="{% static 'brand/logo-icon.png' %}" alt="Dulceras Team" style="height:46px;width:auto;flex-shrink:0">
+        <div class="hidden sm:block" style="height:52px;overflow:hidden;flex-shrink:0">
+          <img src="{% static 'brand/logo-wordmark.png' %}" alt="Dulceras Team" style="height:130px;width:auto;margin-top:-39px">
+        </div>
       </a>
 
       <!-- Nav desktop -->
