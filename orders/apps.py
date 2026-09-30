@@ -14,6 +14,7 @@ def _cleanup_job():
         from django.utils import timezone
         from datetime import timedelta
         from orders.models import Order
+        from payments.models import PaymentIntent
 
         cutoff = timezone.now() - timedelta(hours=48)
         qs = Order.objects.filter(
@@ -22,6 +23,7 @@ def _cleanup_job():
         )
         count = qs.count()
         if count:
+            PaymentIntent.objects.filter(order__in=qs).delete()
             qs.delete()
             print(f'[cleanup] {count} pedido(s) eliminado(s) automáticamente.')
     except Exception as e:

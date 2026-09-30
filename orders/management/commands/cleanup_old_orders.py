@@ -8,11 +8,13 @@ class Command(BaseCommand):
     help = 'Borra pedidos cancelados o entregados con más de 48 horas de antigüedad.'
 
     def handle(self, *args, **options):
+        from payments.models import PaymentIntent
         cutoff = timezone.now() - timedelta(hours=48)
         qs = Order.objects.filter(
             status__in=[Order.CANCELLED, Order.DELIVERED],
             updated_at__lt=cutoff,
         )
         count = qs.count()
+        PaymentIntent.objects.filter(order__in=qs).delete()
         qs.delete()
         self.stdout.write(self.style.SUCCESS(f'Eliminados {count} pedidos viejos.'))
